@@ -1,0 +1,26 @@
+{
+  "name": "@knowflow/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -b",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "hono": "^4.7.7",
+    "@hono/node-server": "^1.14.1",
+    "uuid": "^11.1.0",
+    "drizzle-orm": "^0.39.3",
+    "ai": "^4.3.16",
+    "@knowflow/db": "workspace:*",
+    "@knowflow/shared": "workspace:*",
+    "@knowflow/ai": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

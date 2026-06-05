@@ -1,0 +1,168 @@
+import { useAppStore } from '@/stores/app-store';
+import { useSyncAllSources } from '@/hooks/use-sources';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+  Search,
+  LayoutGrid,
+  LayoutList,
+  RefreshCw,
+  ArrowUpDown,
+  Clock,
+  Eye,
+  TrendingUp,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+export function Header() {
+  const {
+    viewMode,
+    setViewMode,
+    searchQuery,
+    setSearchQuery,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    currentView,
+    selectedSourceId,
+  } = useAppStore();
+
+  const syncAll = useSyncAllSources();
+
+  const getTitle = () => {
+    if (selectedSourceId) return 'Source Articles';
+    switch (currentView) {
+      case 'starred': return 'Starred';
+      case 'read': return 'Read';
+      default: return 'All Articles';
+    }
+  };
+
+  const sortLabels: Record<string, string> = {
+    publishedAt: 'Date',
+    readCount: 'Popularity',
+    createdAt: 'Added',
+  };
+
+  return (
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-border bg-background/80 px-6 glass">
+      {/* Title */}
+      <h1 className="text-lg font-semibold tracking-tight whitespace-nowrap">
+        {getTitle()}
+      </h1>
+
+      {/* Search & Actions */}
+      <div className="flex flex-1 items-center justify-end gap-2">
+        {/* Search */}
+        <div className="w-full max-w-xs">
+          <Input
+            icon={<Search className="h-4 w-4" />}
+            placeholder="Search articles..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 bg-muted/50 border-transparent focus:bg-background focus:border-border"
+          />
+        </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center rounded-lg border border-border p-0.5">
+          <Tooltip content="List view">
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'rounded-md p-1.5 transition-all duration-200',
+                viewMode === 'list'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <LayoutList className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content="Grid view">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'rounded-md p-1.5 transition-all duration-200',
+                viewMode === 'grid'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </Tooltip>
+        </div>
+
+        {/* Sort */}
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <Button variant="ghost" size="icon-sm">
+              <ArrowUpDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setSortBy('publishedAt')}>
+              <Clock className="h-4 w-4" />
+              <span className="flex-1">Date</span>
+              {sortBy === 'publishedAt' && <span className="text-primary">✓</span>}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortBy('readCount')}>
+              <Eye className="h-4 w-4" />
+              <span className="flex-1">Popularity</span>
+              {sortBy === 'readCount' && <span className="text-primary">✓</span>}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortBy('createdAt')}>
+              <TrendingUp className="h-4 w-4" />
+              <span className="flex-1">Added</span>
+              {sortBy === 'createdAt' && <span className="text-primary">✓</span>}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Order</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => setSortOrder('desc')}>
+              <ArrowDown className="h-4 w-4" />
+              <span className="flex-1">Newest first</span>
+              {sortOrder === 'desc' && <span className="text-primary">✓</span>}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortOrder('asc')}>
+              <ArrowUp className="h-4 w-4" />
+              <span className="flex-1">Oldest first</span>
+              {sortOrder === 'asc' && <span className="text-primary">✓</span>}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Sync */}
+        <Tooltip content="Sync all sources">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => syncAll.mutate()}
+            disabled={syncAll.isPending}
+          >
+            <RefreshCw
+              className={cn(
+                'h-4 w-4 transition-transform',
+                syncAll.isPending && 'animate-spin'
+              )}
+            />
+          </Button>
+        </Tooltip>
+      </div>
+    </header>
+  );
+}

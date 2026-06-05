@@ -1,0 +1,351 @@
+@import "tailwindcss";
+
+/* ============================================================
+   KnowFlow — Apple/Notion-inspired Design System
+   ============================================================ */
+
+@theme {
+  /* ── Color Palette ── */
+  --color-background: #ffffff;
+  --color-foreground: #09090b;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-card: #ffffff;
+  --color-card-foreground: #09090b;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #09090b;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-input: #e4e4e7;
+  --color-ring: #6366f1;
+  --color-primary: #6366f1;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #18181b;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-accent: #f4f4f5;
+  --color-accent-foreground: #18181b;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-sidebar: #fafafa;
+  --color-sidebar-foreground: #3f3f46;
+  --color-sidebar-active: #f0f0ff;
+  --color-sidebar-active-foreground: #4f46e5;
+  --color-surface-elevated: #ffffff;
+
+  /* ── Typography ── */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* ── Spacing (aliased for semantic use) ── */
+  --spacing-page: 2rem;
+  --spacing-section: 1.5rem;
+  --spacing-element: 1rem;
+
+  /* ── Radius ── */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 8px 25px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.04);
+  --shadow-dialog: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+
+  /* ── Transitions ── */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+
+  /* ── Animations ── */
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-in-right: slide-in-right 0.3s var(--ease-spring);
+  --animate-slide-in-up: slide-in-up 0.25s var(--ease-spring);
+  --animate-scale-in: scale-in 0.2s var(--ease-spring);
+  --animate-spin-slow: spin 2s linear infinite;
+  --animate-pulse-subtle: pulse-subtle 2s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+}
+
+/* ── Keyframes ── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-in-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Dark Mode ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: #09090b;
+    --color-foreground: #fafafa;
+    --color-muted: #18181b;
+    --color-muted-foreground: #a1a1aa;
+    --color-card: #0f0f12;
+    --color-card-foreground: #fafafa;
+    --color-popover: #141418;
+    --color-popover-foreground: #fafafa;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-input: #27272a;
+    --color-ring: #818cf8;
+    --color-primary: #818cf8;
+    --color-primary-foreground: #09090b;
+    --color-secondary: #1c1c22;
+    --color-secondary-foreground: #fafafa;
+    --color-destructive: #f87171;
+    --color-destructive-foreground: #09090b;
+    --color-accent: #1c1c22;
+    --color-accent-foreground: #fafafa;
+    --color-sidebar: #0c0c0f;
+    --color-sidebar-foreground: #a1a1aa;
+    --color-sidebar-active: rgba(99, 102, 241, 0.1);
+    --color-sidebar-active-foreground: #a5b4fc;
+    --color-surface-elevated: #141418;
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.03);
+    --shadow-card-hover: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --shadow-dialog: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Manual dark mode class */
+.dark {
+  --color-background: #09090b;
+  --color-foreground: #fafafa;
+  --color-muted: #18181b;
+  --color-muted-foreground: #a1a1aa;
+  --color-card: #0f0f12;
+  --color-card-foreground: #fafafa;
+  --color-popover: #141418;
+  --color-popover-foreground: #fafafa;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-input: #27272a;
+  --color-ring: #818cf8;
+  --color-primary: #818cf8;
+  --color-primary-foreground: #09090b;
+  --color-secondary: #1c1c22;
+  --color-secondary-foreground: #fafafa;
+  --color-destructive: #f87171;
+  --color-destructive-foreground: #09090b;
+  --color-accent: #1c1c22;
+  --color-accent-foreground: #fafafa;
+  --color-sidebar: #0c0c0f;
+  --color-sidebar-foreground: #a1a1aa;
+  --color-sidebar-active: rgba(99, 102, 241, 0.1);
+  --color-sidebar-active-foreground: #a5b4fc;
+  --color-surface-elevated: #141418;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-card-hover: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-dialog: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Base Styles ── */
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  line-height: 1.6;
+  letter-spacing: -0.011em;
+  transition: background-color var(--duration-slow) ease,
+              color var(--duration-slow) ease;
+}
+
+/* ── Selection ── */
+::selection {
+  background-color: rgba(99, 102, 241, 0.2);
+  color: inherit;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Article Reader Typography ── */
+.prose-reader {
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  color: var(--color-foreground);
+}
+
+.prose-reader h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.prose-reader h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.025em;
+}
+
+.prose-reader h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.prose-reader p {
+  margin-bottom: 1.25rem;
+}
+
+.prose-reader img {
+  max-width: 100%;
+  border-radius: var(--radius-lg);
+  margin: 1.5rem 0;
+}
+
+.prose-reader blockquote {
+  border-left: 3px solid var(--color-primary);
+  padding-left: 1.25rem;
+  margin: 1.5rem 0;
+  color: var(--color-muted-foreground);
+  font-style: italic;
+}
+
+.prose-reader code {
+  background: var(--color-muted);
+  padding: 0.2em 0.4em;
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
+.prose-reader pre {
+  background: var(--color-muted);
+  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.prose-reader pre code {
+  background: none;
+  padding: 0;
+}
+
+.prose-reader a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-reader ul, .prose-reader ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.prose-reader li {
+  margin-bottom: 0.375rem;
+}
+
+.prose-reader hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 2rem 0;
+}
+
+/* ── Focus Styles ── */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+/* ── Glass effect utility ── */
+.glass {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
