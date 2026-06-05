@@ -20,6 +20,7 @@ import {
   Clock,
   MessageCircle,
   Edit,
+  Twitter,
 } from 'lucide-react';
 
 interface SourceCardProps {
@@ -58,7 +59,11 @@ export function SourceCard({ source }: SourceCardProps) {
           />
         ) : (
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10 ring-2 ring-border">
-            <MessageCircle className="h-5 w-5 text-primary" />
+            {source.type === 'twitter' ? (
+              <Twitter className="h-5 w-5 text-primary" />
+            ) : (
+              <MessageCircle className="h-5 w-5 text-primary" />
+            )}
           </div>
         )}
 

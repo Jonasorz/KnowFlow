@@ -9,8 +9,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSearchWechat, useCreateSource, useParseWechatBiz } from '@/hooks/use-sources';
-import { Search, Plus, Check, Users, Eye, MessageCircle, HelpCircle, Loader2 } from 'lucide-react';
+import { useSearchWechat, useSearchTwitter, useCreateSource, useParseWechatBiz } from '@/hooks/use-sources';
+import { Search, Plus, Check, Users, Eye, MessageCircle, HelpCircle, Loader2, Twitter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { WechatAccountSearchResult } from '@knowflow/shared';
 
@@ -41,11 +41,12 @@ function extractBiz(input: string): string {
 }
 
 export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
+  const [platform, setPlatform] = useState<'wechat' | 'twitter'>('wechat');
   const [activeTab, setActiveTab] = useState<'search' | 'manual'>('search');
   const [query, setQuery] = useState('');
   const [subscribedIds, setSubscribedIds] = useState<Set<string>>(new Set());
   
-  // Manual states
+  // WeChat Manual states
   const [manualName, setManualName] = useState('');
   const [manualBizOrUrl, setManualBizOrUrl] = useState('');
   const [resolvedBizFromBackend, setResolvedBizFromBackend] = useState('');
@@ -53,9 +54,28 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
   const [manualAvatarUrl, setManualAvatarUrl] = useState('');
   const [manualError, setManualError] = useState('');
 
-  const { data: results, isLoading, isError } = useSearchWechat(query);
+  // Twitter Manual states
+  const [twManualName, setTwManualName] = useState('');
+  const [twManualHandle, setTwManualHandle] = useState('');
+  const [twManualDescription, setTwManualDescription] = useState('');
+  const [twManualAvatarUrl, setTwManualAvatarUrl] = useState('');
+  const [twManualError, setTwManualError] = useState('');
+
+  const { data: wechatResults, isLoading: wechatLoading, isError: wechatError } = useSearchWechat(query);
+  const { data: twitterResults, isLoading: twitterLoading, isError: twitterError } = useSearchTwitter(query);
   const createSource = useCreateSource();
   const parseWechatBiz = useParseWechatBiz();
+
+  const results = platform === 'wechat' ? wechatResults : twitterResults;
+  const isLoading = platform === 'wechat' ? wechatLoading : twitterLoading;
+  const isError = platform === 'wechat' ? wechatError : twitterError;
+
+  // Reset search query and errors when platform changes
+  useEffect(() => {
+    setQuery('');
+    setManualError('');
+    setTwManualError('');
+  }, [platform]);
 
   // Reset resolved state and errors when input changes
   useEffect(() => {
@@ -65,6 +85,8 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
 
   // Trigger backend parsing if input is a URL and has no local biz query param
   useEffect(() => {
+    if (platform !== 'wechat') return;
+    
     const trimmed = manualBizOrUrl.trim();
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       // Check if it already has __biz
@@ -87,12 +109,12 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
 
       return () => clearTimeout(delayDebounceFn);
     }
-  }, [manualBizOrUrl]);
+  }, [manualBizOrUrl, platform]);
 
   const handleSubscribe = async (account: WechatAccountSearchResult) => {
     try {
       await createSource.mutateAsync({
-        type: 'wechat',
+        type: platform,
         name: account.name,
         identifier: account.biz,
         avatarUrl: account.avatar,
@@ -104,7 +126,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
     }
   };
 
-  const handleManualSubmit = async (e: React.FormEvent) => {
+  const handleWechatManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setManualError('');
 
@@ -167,6 +189,46 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
     }
   };
 
+  const handleTwitterManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTwManualError('');
+
+    if (!twManualName.trim()) {
+      setTwManualError('订阅源名称不能为空');
+      return;
+    }
+    if (!twManualHandle.trim()) {
+      setTwManualError('Twitter 用户名不能为空');
+      return;
+    }
+
+    let handle = twManualHandle.trim();
+    if (handle.startsWith('@')) {
+      handle = handle.substring(1);
+    }
+
+    try {
+      await createSource.mutateAsync({
+        type: 'twitter',
+        name: twManualName.trim(),
+        identifier: handle,
+        avatarUrl: twManualAvatarUrl.trim() || undefined,
+        description: twManualDescription.trim() || undefined,
+      });
+
+      // Clear form
+      setTwManualName('');
+      setTwManualHandle('');
+      setTwManualDescription('');
+      setTwManualAvatarUrl('');
+      
+      // Close dialog
+      onOpenChange(false);
+    } catch (err) {
+      setTwManualError(err instanceof Error ? err.message : '添加 Twitter 订阅源失败');
+    }
+  };
+
   const localBiz = extractBiz(manualBizOrUrl);
   const isLocalExtracted = localBiz && localBiz !== manualBizOrUrl.trim();
   const finalBiz = isLocalExtracted ? localBiz : resolvedBizFromBackend || (manualBizOrUrl.trim().startsWith('http') ? '' : manualBizOrUrl.trim());
@@ -175,37 +237,71 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add WeChat Source</DialogTitle>
+          <DialogTitle>添加订阅源</DialogTitle>
           <DialogDescription>
-            Subscribe to a WeChat public account to sync articles.
+            从不同的内容源同步精彩文章或推文。
           </DialogDescription>
         </DialogHeader>
+
+        {/* Platform Selector */}
+        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-muted/65 border border-border/50 my-1">
+          <button
+            onClick={() => {
+              setPlatform('wechat');
+              setActiveTab('search');
+            }}
+            className={cn(
+              'flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer',
+              platform === 'wechat'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <MessageCircle className="h-3.5 w-3.5 text-green-500" />
+            微信公众号
+          </button>
+          <button
+            onClick={() => {
+              setPlatform('twitter');
+              setActiveTab('search');
+            }}
+            className={cn(
+              'flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer',
+              platform === 'twitter'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Twitter className="h-3.5 w-3.5 text-sky-500" />
+            X (Twitter)
+          </button>
+        </div>
 
         {/* Tab Selector */}
         <div className="flex border-b border-border my-2">
           <button
             onClick={() => setActiveTab('search')}
             className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all duration-200 border-b-2 cursor-pointer',
+              'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-all duration-200 border-b-2 cursor-pointer',
               activeTab === 'search'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             )}
           >
             <Search className="h-3.5 w-3.5" />
-            搜索订阅 (付费接口)
+            搜索订阅
           </button>
           <button
             onClick={() => setActiveTab('manual')}
             className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-all duration-200 border-b-2 cursor-pointer',
+              'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-all duration-200 border-b-2 cursor-pointer',
               activeTab === 'manual'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             )}
           >
             <Plus className="h-3.5 w-3.5" />
-            手动添加 (免费/免搜索)
+            手动添加
           </button>
         </div>
 
@@ -215,7 +311,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
             <div className="mt-2">
               <Input
                 icon={<Search className="h-4 w-4" />}
-                placeholder="Search account name..."
+                placeholder={platform === 'wechat' ? "搜索公众号名称..." : "搜索 Twitter 用户..."}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 autoFocus
@@ -241,13 +337,13 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
 
               {isError && (
                 <div className="py-8 text-center text-sm text-muted-foreground">
-                  Search failed. Please check your API key in Settings.
+                  搜索失败。请检查设置中的 API Key 配置。
                 </div>
               )}
 
               {!isLoading && results && results.length === 0 && query.length >= 2 && (
                 <div className="py-8 text-center text-sm text-muted-foreground">
-                  No accounts found for "{query}"
+                  未找到与 "{query}" 相关的账户
                 </div>
               )}
 
@@ -269,13 +365,22 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                           />
                         ) : (
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 ring-1 ring-border">
-                            <MessageCircle className="h-5 w-5 text-primary" />
+                            {platform === 'wechat' ? (
+                              <MessageCircle className="h-5 w-5 text-primary" />
+                            ) : (
+                              <Twitter className="h-5 w-5 text-primary" />
+                            )}
                           </div>
                         )}
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">{account.name}</div>
+                          <div className="font-semibold text-sm truncate flex items-center gap-1">
+                            {account.name}
+                            {platform === 'twitter' && (
+                              <span className="text-xs text-muted-foreground font-normal font-mono">@{account.biz}</span>
+                            )}
+                          </div>
                           {account.description && (
                             <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                               {account.description}
@@ -283,13 +388,13 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                           )}
                           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                             {account.fans !== undefined && (
-                              <span className="flex items-center gap-1">
+                              <span className="flex items-center gap-1 font-mono">
                                 <Users className="h-3 w-3" />
                                 {account.fans.toLocaleString()}
                               </span>
                             )}
-                            {account.avgTopRead !== undefined && (
-                              <span className="flex items-center gap-1">
+                            {platform === 'wechat' && account.avgTopRead !== undefined && (
+                              <span className="flex items-center gap-1 font-mono">
                                 <Eye className="h-3 w-3" />
                                 ~{account.avgTopRead.toLocaleString()}
                               </span>
@@ -308,12 +413,12 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                           {isSubscribed ? (
                             <>
                               <Check className="h-3.5 w-3.5" />
-                              Added
+                              已订阅
                             </>
                           ) : (
                             <>
                               <Plus className="h-3.5 w-3.5" />
-                              Add
+                              订阅
                             </>
                           )}
                         </Button>
@@ -326,89 +431,144 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
               {query.length < 2 && !isLoading && (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <Search className="h-8 w-8 mb-3 opacity-40" />
-                  <p className="text-sm">Type at least 2 characters to search</p>
+                  <p className="text-sm">请输入至少 2 个字符开始搜索</p>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <form onSubmit={handleManualSubmit} className="space-y-3.5 mt-2">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">公众号名称 *</label>
-              <Input
-                placeholder="例如: 腾讯科技"
-                value={manualName}
-                onChange={(e) => setManualName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Biz ID 或公众号文章链接 *</label>
-              <div className="relative">
+          platform === 'wechat' ? (
+            <form onSubmit={handleWechatManualSubmit} className="space-y-3.5 mt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">公众号名称 *</label>
                 <Input
-                  placeholder="粘贴公众号文章的链接，或直接输入 Biz ID"
-                  value={manualBizOrUrl}
-                  onChange={(e) => setManualBizOrUrl(e.target.value)}
-                  className={cn(parseWechatBiz.isPending && "pr-9")}
+                  placeholder="例如: 腾讯科技"
+                  value={manualName}
+                  onChange={(e) => setManualName(e.target.value)}
                   required
                 />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">Biz ID 或公众号文章链接 *</label>
+                <div className="relative">
+                  <Input
+                    placeholder="粘贴公众号文章的链接，或直接输入 Biz ID"
+                    value={manualBizOrUrl}
+                    onChange={(e) => setManualBizOrUrl(e.target.value)}
+                    className={cn(parseWechatBiz.isPending && "pr-9")}
+                    required
+                  />
+                  {parseWechatBiz.isPending && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    </div>
+                  )}
+                </div>
                 {parseWechatBiz.isPending && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <p className="text-[10px] text-primary animate-pulse mt-1">
+                    正在从文章链接中获取并解析 Biz ID...
+                  </p>
+                )}
+                {!parseWechatBiz.isPending && finalBiz && (
+                  <div className="mt-1.5 p-2 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">解析出的 Biz ID:</span>
+                    <span className="font-mono text-primary font-semibold select-all">{finalBiz}</span>
+                  </div>
+                )}
+                {!parseWechatBiz.isPending && !finalBiz && (
+                  <div className="flex items-start gap-1 text-[10px] text-muted-foreground leading-normal mt-1">
+                    <HelpCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60 mt-0.5" />
+                    <p>提示：支持手机复制的短链（如 `mp.weixin.qq.com/s/...`）。粘贴后系统会自动请求并解析其 HTML 以提取 Biz ID 建立订阅。</p>
                   </div>
                 )}
               </div>
-              {parseWechatBiz.isPending && (
-                <p className="text-[10px] text-primary animate-pulse mt-1">
-                  正在从文章链接中获取并解析 Biz ID...
-                </p>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">描述 (可选)</label>
+                <Input
+                  placeholder="例如: 腾讯官方科技前沿资讯媒体"
+                  value={manualDescription}
+                  onChange={(e) => setManualDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">头像链接 (可选)</label>
+                <Input
+                  placeholder="填写图片 URL 地址"
+                  value={manualAvatarUrl}
+                  onChange={(e) => setManualAvatarUrl(e.target.value)}
+                />
+              </div>
+
+              {manualError && (
+                <p className="text-xs font-medium text-destructive mt-1">{manualError}</p>
               )}
-              {!parseWechatBiz.isPending && finalBiz && (
-                <div className="mt-1.5 p-2 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground">解析出的 Biz ID:</span>
-                  <span className="font-mono text-primary font-semibold select-all">{finalBiz}</span>
-                </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border mt-4">
+                <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                  取消
+                </Button>
+                <Button type="submit" size="sm" disabled={createSource.isPending || parseWechatBiz.isPending}>
+                  {createSource.isPending ? '添加中...' : '添加订阅'}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleTwitterManualSubmit} className="space-y-3.5 mt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">用户昵称 *</label>
+                <Input
+                  placeholder="例如: Elon Musk"
+                  value={twManualName}
+                  onChange={(e) => setTwManualName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">Twitter 用户名 (Handle) *</label>
+                <Input
+                  placeholder="例如: elonmusk (不需要带 @ 符号)"
+                  value={twManualHandle}
+                  onChange={(e) => setTwManualHandle(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">个人简介 (可选)</label>
+                <Input
+                  placeholder="例如: Tesla, SpaceX, xAI, Neuralink"
+                  value={twManualDescription}
+                  onChange={(e) => setTwManualDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">头像链接 (可选)</label>
+                <Input
+                  placeholder="填写图片 URL 地址"
+                  value={twManualAvatarUrl}
+                  onChange={(e) => setTwManualAvatarUrl(e.target.value)}
+                />
+              </div>
+
+              {twManualError && (
+                <p className="text-xs font-medium text-destructive mt-1">{twManualError}</p>
               )}
-              {!parseWechatBiz.isPending && !finalBiz && (
-                <div className="flex items-start gap-1 text-[10px] text-muted-foreground leading-normal mt-1">
-                  <HelpCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60 mt-0.5" />
-                  <p>提示：支持手机复制的短链（如 `mp.weixin.qq.com/s/...`）。粘贴后系统会自动请求并解析其 HTML 以提取 Biz ID 建立订阅。</p>
-                </div>
-              )}
-            </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">描述 (可选)</label>
-              <Input
-                placeholder="例如: 腾讯官方科技前沿资讯媒体"
-                value={manualDescription}
-                onChange={(e) => setManualDescription(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">头像链接 (可选)</label>
-              <Input
-                placeholder="填写图片 URL 地址"
-                value={manualAvatarUrl}
-                onChange={(e) => setManualAvatarUrl(e.target.value)}
-              />
-            </div>
-
-            {manualError && (
-              <p className="text-xs font-medium text-destructive mt-1">{manualError}</p>
-            )}
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-border mt-4">
-              <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-                取消
-              </Button>
-              <Button type="submit" size="sm" disabled={createSource.isPending || parseWechatBiz.isPending}>
-                {createSource.isPending ? '添加中...' : '添加订阅'}
-              </Button>
-            </div>
-          </form>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border mt-4">
+                <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                  取消
+                </Button>
+                <Button type="submit" size="sm" disabled={createSource.isPending}>
+                  {createSource.isPending ? '添加中...' : '添加订阅'}
+                </Button>
+              </div>
+            </form>
+          )
         )}
       </DialogContent>
     </Dialog>

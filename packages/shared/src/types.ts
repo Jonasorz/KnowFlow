@@ -96,9 +96,20 @@ export interface WechatArticle {
   digest?: string; // short summary
 }
 
+export interface TwitterUserSearchResult {
+  name: string;
+  userName: string;
+  id: string;
+  avatar?: string;
+  description?: string;
+  followers?: number;
+}
+
 export interface DajialaBalanceInfo {
   code: number;
   remain_money: number;
   yesterday_money: number;
   request_time: string;
 }
+
+

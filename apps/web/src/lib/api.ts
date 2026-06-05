@@ -78,6 +78,8 @@ export const sourcesApi = {
     request<{ newArticles: number }>('/sources/sync', { method: 'POST' }),
   searchWechat: (query: string) =>
     request<WechatAccountSearchResult[]>(`/sources/wechat/search?q=${encodeURIComponent(query)}`),
+  searchTwitter: (query: string) =>
+    request<WechatAccountSearchResult[]>(`/sources/twitter/search?q=${encodeURIComponent(query)}`),
   parseWechatBiz: (url: string) =>
     request<{ biz: string }>(`/sources/wechat/parse-biz?url=${encodeURIComponent(url)}`),
 };

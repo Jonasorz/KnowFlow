@@ -10,7 +10,8 @@ import {
   type WechatAccountSearchResult,
 } from '@knowflow/shared';
 import { WechatSource } from '../services/sources/wechat.js';
-import { getDajialaApiKey } from '../services/settings.js';
+import { TwitterSource } from '../services/sources/twitter.js';
+import { getDajialaApiKey, getTwitterApiKey } from '../services/settings.js';
 
 const { sources, articles } = schema;
 
@@ -23,18 +24,27 @@ sourcesRoutes.post('/search', async (c) => {
   const body = await c.req.json<{ query: string; type?: string }>();
   const { query, type = 'wechat' } = body;
 
-  if (!query || query.trim().length === 0) {
-    return c.json<ApiResponse>(
-      { success: false, error: 'Search query is required' },
-      400
-    );
-  }
-
-  if (type !== 'wechat') {
+  if (type !== 'wechat' && type !== 'twitter') {
     return c.json<ApiResponse>(
       { success: false, error: `Source type "${type}" is not supported yet` },
       400
     );
+  }
+
+  if (type === 'twitter') {
+    const apiKey = await getTwitterApiKey();
+    if (!apiKey) {
+      return c.json<ApiResponse>(
+        { success: false, error: 'Twitter API key (twitterApiKey) is not configured. Please set it in Settings.' },
+        400
+      );
+    }
+    const twitter = new TwitterSource(apiKey);
+    const results = await twitter.search(query);
+    return c.json<ApiResponse<any[]>>({
+      success: true,
+      data: results,
+    });
   }
 
   const apiKey = await getDajialaApiKey();
@@ -48,7 +58,7 @@ sourcesRoutes.post('/search', async (c) => {
   const wechat = new WechatSource(apiKey);
   const results = await wechat.search(query);
 
-  return c.json<ApiResponse<WechatAccountSearchResult[]>>({
+  return c.json<ApiResponse<any[]>>({
     success: true,
     data: results,
   });
@@ -78,7 +88,37 @@ sourcesRoutes.get('/wechat/search', async (c) => {
   const wechat = new WechatSource(apiKey);
   const results = await wechat.search(query);
 
-  return c.json<ApiResponse<WechatAccountSearchResult[]>>({
+  return c.json<ApiResponse<any[]>>({
+    success: true,
+    data: results,
+  });
+});
+
+// ============================================================
+// GET /twitter/search — search for Twitter users
+// ============================================================
+sourcesRoutes.get('/twitter/search', async (c) => {
+  const query = c.req.query('q');
+
+  if (!query || query.trim().length === 0) {
+    return c.json<ApiResponse>(
+      { success: false, error: 'Search query parameter "q" is required' },
+      400
+    );
+  }
+
+  const apiKey = await getTwitterApiKey();
+  if (!apiKey) {
+    return c.json<ApiResponse>(
+      { success: false, error: 'Twitter API key (twitterApiKey) is not configured. Please set it in Settings.' },
+      400
+    );
+  }
+
+  const twitter = new TwitterSource(apiKey);
+  const results = await twitter.search(query);
+
+  return c.json<ApiResponse<any[]>>({
     success: true,
     data: results,
   });
@@ -371,60 +411,111 @@ sourcesRoutes.post('/sync', async (c) => {
   const db = getDatabase();
   const allSources = db.select().from(sources).where(eq(sources.isActive, true)).all();
 
-  const apiKey = await getDajialaApiKey();
-  if (!apiKey) {
-    return c.json<ApiResponse>(
-      { success: false, error: 'WeChat API key (dajialaApiKey) is not configured.' },
-      400
-    );
-  }
+  const dajialaApiKey = await getDajialaApiKey();
+  const twitterApiKey = await getTwitterApiKey();
 
-  const wechat = new WechatSource(apiKey);
+  const wechat = dajialaApiKey ? new WechatSource(dajialaApiKey) : null;
+  const twitter = twitterApiKey ? new TwitterSource(twitterApiKey) : null;
+
   let totalNewArticles = 0;
   const syncResults = [];
 
   for (const source of allSources) {
-    if (source.type !== 'wechat') continue;
-
-    const isFirstSync = !source.lastSyncAt;
-    const pagesToFetch = isFirstSync ? [1, 2, 3] : [1];
     let newCount = 0;
 
-    for (const page of pagesToFetch) {
+    if (source.type === 'wechat') {
+      if (!wechat) {
+        console.warn(`Skipping WeChat source "${source.name}" sync: API key not configured.`);
+        syncResults.push({ id: source.id, name: source.name, newArticles: 0, error: 'API key not configured' });
+        continue;
+      }
+
+      const isFirstSync = !source.lastSyncAt;
+      const pagesToFetch = isFirstSync ? [1, 2, 3] : [1];
+
+      for (const page of pagesToFetch) {
+        try {
+          const fetchedArticles = await wechat.fetchArticles(source.identifier, page);
+          if (fetchedArticles.length === 0) break;
+
+          for (const article of fetchedArticles) {
+            const existing = db
+              .select({ id: articles.id })
+              .from(articles)
+              .where(eq(articles.originalUrl, article.url))
+              .get();
+
+            if (existing) continue;
+
+            const newArticle: schema.NewArticle = {
+              id: uuidv4(),
+              sourceId: source.id,
+              title: article.title,
+              author: article.author ?? null,
+              summary: article.digest ?? null,
+              originalUrl: article.url,
+              coverImageUrl: article.cover ?? null,
+              publishedAt: article.ctime,
+              fetchedAt: new Date().toISOString(),
+              isRead: false,
+              isStarred: false,
+            };
+
+            db.insert(articles).values(newArticle).run();
+            newCount++;
+          }
+        } catch (err) {
+          console.error(`Error syncing WeChat page ${page} for source ${source.name}:`, err);
+          break;
+        }
+      }
+    } else if (source.type === 'twitter') {
+      if (!twitter) {
+        console.warn(`Skipping Twitter source "${source.name}" sync: API key not configured.`);
+        syncResults.push({ id: source.id, name: source.name, newArticles: 0, error: 'API key not configured' });
+        continue;
+      }
+
       try {
-        const fetchedArticles = await wechat.fetchArticles(source.identifier, page);
-        if (fetchedArticles.length === 0) break;
+        const fetchedTweets = await twitter.fetchArticles(source.identifier);
+        if (fetchedTweets.length > 0) {
+          for (const tweet of fetchedTweets) {
+            const existing = db
+              .select({ id: articles.id })
+              .from(articles)
+              .where(eq(articles.originalUrl, tweet.url))
+              .get();
 
-        for (const article of fetchedArticles) {
-          const existing = db
-            .select({ id: articles.id })
-            .from(articles)
-            .where(eq(articles.originalUrl, article.url))
-            .get();
+            if (existing) continue;
 
-          if (existing) continue;
+            const newArticle: schema.NewArticle = {
+              id: uuidv4(),
+              sourceId: source.id,
+              title: tweet.title,
+              author: tweet.author ?? null,
+              summary: tweet.digest ?? null,
+              originalUrl: tweet.url,
+              coverImageUrl: tweet.cover ?? null,
+              publishedAt: tweet.ctime,
+              fetchedAt: new Date().toISOString(),
+              isRead: false,
+              isStarred: false,
+              contentText: tweet.contentText ?? null,
+              contentHtml: tweet.contentHtml ?? null,
+              likeCount: tweet.likeCount ?? null,
+              readCount: tweet.readCount ?? null,
+              commentCount: tweet.commentCount ?? null,
+            };
 
-          const newArticle: schema.NewArticle = {
-            id: uuidv4(),
-            sourceId: source.id,
-            title: article.title,
-            author: article.author ?? null,
-            summary: article.digest ?? null,
-            originalUrl: article.url,
-            coverImageUrl: article.cover ?? null,
-            publishedAt: article.ctime,
-            fetchedAt: new Date().toISOString(),
-            isRead: false,
-            isStarred: false,
-          };
-
-          db.insert(articles).values(newArticle).run();
-          newCount++;
+            db.insert(articles).values(newArticle).run();
+            newCount++;
+          }
         }
       } catch (err) {
-        console.error(`Error syncing page ${page} for source ${source.name}:`, err);
-        break;
+        console.error(`Error syncing Twitter source ${source.name}:`, err);
       }
+    } else {
+      continue;
     }
 
     db.update(sources)
@@ -461,42 +552,86 @@ sourcesRoutes.post('/:id/sync', async (c) => {
     );
   }
 
-  if (source.type !== 'wechat') {
+  if (source.type !== 'wechat' && source.type !== 'twitter') {
     return c.json<ApiResponse>(
       { success: false, error: `Sync for source type "${source.type}" is not supported yet` },
       400
     );
   }
 
-  const apiKey = await getDajialaApiKey();
-  if (!apiKey) {
-    return c.json<ApiResponse>(
-      { success: false, error: 'WeChat API key (dajialaApiKey) is not configured.' },
-      400
-    );
-  }
-
-  const wechat = new WechatSource(apiKey);
-
-  // Scheme A: Fetch 3 pages on first sync (lastSyncAt is null), 1 page on subsequent syncs
-  const isFirstSync = !source.lastSyncAt;
-  const pagesToFetch = isFirstSync ? [1, 2, 3] : [1];
-
   let newCount = 0;
   let totalFetched = 0;
 
-  for (const page of pagesToFetch) {
-    try {
-      const fetchedArticles = await wechat.fetchArticles(source.identifier, page);
-      totalFetched += fetchedArticles.length;
-      if (fetchedArticles.length === 0) break; // No more articles available
+  if (source.type === 'wechat') {
+    const apiKey = await getDajialaApiKey();
+    if (!apiKey) {
+      return c.json<ApiResponse>(
+        { success: false, error: 'WeChat API key (dajialaApiKey) is not configured.' },
+        400
+      );
+    }
 
-      for (const article of fetchedArticles) {
-        // Skip if article with same URL already exists
+    const wechat = new WechatSource(apiKey);
+    const isFirstSync = !source.lastSyncAt;
+    const pagesToFetch = isFirstSync ? [1, 2, 3] : [1];
+
+    for (const page of pagesToFetch) {
+      try {
+        const fetchedArticles = await wechat.fetchArticles(source.identifier, page);
+        totalFetched += fetchedArticles.length;
+        if (fetchedArticles.length === 0) break;
+
+        for (const article of fetchedArticles) {
+          const existing = db
+            .select({ id: articles.id })
+            .from(articles)
+            .where(eq(articles.originalUrl, article.url))
+            .get();
+
+          if (existing) continue;
+
+          const newArticle: schema.NewArticle = {
+            id: uuidv4(),
+            sourceId: source.id,
+            title: article.title,
+            author: article.author ?? null,
+            summary: article.digest ?? null,
+            originalUrl: article.url,
+            coverImageUrl: article.cover ?? null,
+            publishedAt: article.ctime,
+            fetchedAt: new Date().toISOString(),
+            isRead: false,
+            isStarred: false,
+          };
+
+          db.insert(articles).values(newArticle).run();
+          newCount++;
+        }
+      } catch (err) {
+        console.error(`Error syncing WeChat page ${page} for source ${source.name}:`, err);
+        if (page === 1) throw err;
+        break;
+      }
+    }
+  } else if (source.type === 'twitter') {
+    const apiKey = await getTwitterApiKey();
+    if (!apiKey) {
+      return c.json<ApiResponse>(
+        { success: false, error: 'Twitter API key (twitterApiKey) is not configured.' },
+        400
+      );
+    }
+
+    const twitter = new TwitterSource(apiKey);
+    try {
+      const fetchedTweets = await twitter.fetchArticles(source.identifier);
+      totalFetched = fetchedTweets.length;
+
+      for (const tweet of fetchedTweets) {
         const existing = db
           .select({ id: articles.id })
           .from(articles)
-          .where(eq(articles.originalUrl, article.url))
+          .where(eq(articles.originalUrl, tweet.url))
           .get();
 
         if (existing) continue;
@@ -504,25 +639,28 @@ sourcesRoutes.post('/:id/sync', async (c) => {
         const newArticle: schema.NewArticle = {
           id: uuidv4(),
           sourceId: source.id,
-          title: article.title,
-          author: article.author ?? null,
-          summary: article.digest ?? null,
-          originalUrl: article.url,
-          coverImageUrl: article.cover ?? null,
-          publishedAt: article.ctime,
+          title: tweet.title,
+          author: tweet.author ?? null,
+          summary: tweet.digest ?? null,
+          originalUrl: tweet.url,
+          coverImageUrl: tweet.cover ?? null,
+          publishedAt: tweet.ctime,
           fetchedAt: new Date().toISOString(),
           isRead: false,
           isStarred: false,
+          contentText: tweet.contentText ?? null,
+          contentHtml: tweet.contentHtml ?? null,
+          likeCount: tweet.likeCount ?? null,
+          readCount: tweet.readCount ?? null,
+          commentCount: tweet.commentCount ?? null,
         };
 
         db.insert(articles).values(newArticle).run();
         newCount++;
       }
     } catch (err) {
-      console.error(`Error syncing page ${page} for source ${source.name}:`, err);
-      // If the first page fails, we fail the request. If subsequent pages fail, we just stop.
-      if (page === 1) throw err;
-      break;
+      console.error(`Error syncing Twitter source ${source.name}:`, err);
+      throw err;
     }
   }
 

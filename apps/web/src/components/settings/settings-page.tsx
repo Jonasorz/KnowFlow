@@ -267,6 +267,15 @@ export function SettingsPage() {
           </ApiKeyField>
           <Separator />
           <ApiKeyField
+            label="X (Twitter) API Key"
+            provider="twitter"
+            value={formState.twitterApiKey || ''}
+            onChange={(v) => setFormState((s) => ({ ...s, twitterApiKey: v }))}
+            onSave={() => handleSaveKey('twitterApiKey')}
+            saving={updateSettings.isPending}
+          />
+          <Separator />
+          <ApiKeyField
             label="OpenAI API Key"
             provider="openai"
             value={formState.openaiApiKey || ''}

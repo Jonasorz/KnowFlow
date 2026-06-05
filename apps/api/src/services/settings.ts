@@ -100,6 +100,13 @@ export async function getDajialaApiKey(): Promise<string | undefined> {
 }
 
 /**
+ * Get the Twitter API key.
+ */
+export async function getTwitterApiKey(): Promise<string | undefined> {
+  return getSetting('twitterApiKey');
+}
+
+/**
  * Get the Tavily API key for Web search access.
  */
 export async function getTavilyApiKey(): Promise<string | undefined> {

@@ -9,7 +9,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useUpdateSource, useDeleteSource } from '@/hooks/use-sources';
-import { Upload, X, Camera, MessageCircle, Trash2 } from 'lucide-react';
+import { Upload, X, Camera, MessageCircle, Trash2, Twitter } from 'lucide-react';
 import type { SourceInfo } from '@knowflow/shared';
 
 interface EditSourceDialogProps {
@@ -111,7 +111,11 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
-                  <MessageCircle className="h-8 w-8 text-muted-foreground/60" />
+                  {source.type === 'twitter' ? (
+                    <Twitter className="h-8 w-8 text-muted-foreground/60" />
+                  ) : (
+                    <MessageCircle className="h-8 w-8 text-muted-foreground/60" />
+                  )}
                 </div>
               )}
               {/* Overlay on hover */}

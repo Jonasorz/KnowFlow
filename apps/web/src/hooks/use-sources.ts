@@ -126,11 +126,22 @@ export function useSearchWechat(query: string) {
   return useQuery({
     queryKey: ['wechat-search', query],
     queryFn: () => sourcesApi.searchWechat(query),
-    enabled: query.length >= 2,
+    enabled: query.trim().length >= 2,
+    staleTime: 5 * 60 * 1000, // 5 mins
+  });
+}
+
+export function useSearchTwitter(query: string) {
+  return useQuery({
+    queryKey: ['twitter-search', query],
+    queryFn: () => sourcesApi.searchTwitter(query),
+    enabled: query.trim().length >= 2,
+    staleTime: 5 * 60 * 1000, // 5 mins
   });
 }
 
 export function useParseWechatBiz() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (url: string) => sourcesApi.parseWechatBiz(url),
   });
