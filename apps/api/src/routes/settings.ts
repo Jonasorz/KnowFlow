@@ -169,11 +169,11 @@ settingsRoutes.post('/test-key', async (c) => {
       });
       valid = response.status !== 401 && response.status !== 403;
     } else if (provider === 'twitter') {
-      // Basic ping/check for twitterapi.io key
-      const response = await fetch('https://api.twitterapi.io/v1/ping', {
+      // Fetch user profile of '@twitter' to check key validity
+      const response = await fetch('https://api.twitterapi.io/twitter/user/info?userName=twitter', {
         headers: { 'X-API-Key': key },
       });
-      valid = response.status !== 401 && response.status !== 403;
+      valid = response.status === 200;
     } else if (provider === 'tavily') {
       const response = await fetch('https://api.tavily.com/search', {
         method: 'POST',
