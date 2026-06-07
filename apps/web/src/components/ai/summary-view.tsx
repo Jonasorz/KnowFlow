@@ -6,6 +6,16 @@ interface SummaryViewProps {
 }
 
 export function SummaryView({ content, isStreaming }: SummaryViewProps) {
+  const parseInlineMarkdown = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index} className="font-bold text-foreground">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   if (!content) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -23,21 +33,21 @@ export function SummaryView({ content, isStreaming }: SummaryViewProps) {
         if (line.startsWith('### ')) {
           return (
             <h3 key={i} className="mt-4 mb-2 text-sm font-semibold text-foreground">
-              {line.slice(4)}
+              {parseInlineMarkdown(line.slice(4))}
             </h3>
           );
         }
         if (line.startsWith('## ')) {
           return (
             <h2 key={i} className="mt-4 mb-2 text-base font-semibold text-foreground">
-              {line.slice(3)}
+              {parseInlineMarkdown(line.slice(3))}
             </h2>
           );
         }
         if (line.startsWith('# ')) {
           return (
             <h1 key={i} className="mt-4 mb-2 text-lg font-bold text-foreground">
-              {line.slice(2)}
+              {parseInlineMarkdown(line.slice(2))}
             </h1>
           );
         }
@@ -45,7 +55,7 @@ export function SummaryView({ content, isStreaming }: SummaryViewProps) {
           return (
             <div key={i} className="flex gap-2 ml-1 my-0.5">
               <span className="text-muted-foreground mt-1 shrink-0">•</span>
-              <span className="text-muted-foreground">{line.slice(2)}</span>
+              <span className="text-muted-foreground">{parseInlineMarkdown(line.slice(2))}</span>
             </div>
           );
         }
@@ -55,7 +65,7 @@ export function SummaryView({ content, isStreaming }: SummaryViewProps) {
             return (
               <div key={i} className="flex gap-2 ml-1 my-0.5">
                 <span className="text-muted-foreground shrink-0 tabular-nums">{match[1]}.</span>
-                <span className="text-muted-foreground">{match[2]}</span>
+                <span className="text-muted-foreground">{parseInlineMarkdown(match[2])}</span>
               </div>
             );
           }
@@ -63,21 +73,21 @@ export function SummaryView({ content, isStreaming }: SummaryViewProps) {
         if (line.startsWith('> ')) {
           return (
             <blockquote key={i} className="border-l-2 border-primary/30 pl-3 my-2 text-muted-foreground italic">
-              {line.slice(2)}
+              {parseInlineMarkdown(line.slice(2))}
             </blockquote>
           );
         }
         if (line.startsWith('**') && line.endsWith('**')) {
           return (
             <p key={i} className="font-semibold text-foreground my-1">
-              {line.slice(2, -2)}
+              {parseInlineMarkdown(line.slice(2, -2))}
             </p>
           );
         }
 
         return (
           <p key={i} className="text-muted-foreground my-1">
-            {line}
+            {parseInlineMarkdown(line)}
           </p>
         );
       })}

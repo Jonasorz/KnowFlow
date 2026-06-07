@@ -4,7 +4,7 @@ import type { ArticleFilter, UpdateArticleInput } from '@knowflow/shared';
 import { useAppStore } from '@/stores/app-store';
 
 export function useArticles(overrides?: Partial<ArticleFilter>) {
-  const { currentView, selectedSourceId, searchQuery, sortBy, sortOrder } = useAppStore();
+  const { currentView, selectedSourceId, selectedTag, searchQuery, sortBy, sortOrder } = useAppStore();
 
   const filter: Partial<ArticleFilter> = {
     sortBy,
@@ -14,6 +14,7 @@ export function useArticles(overrides?: Partial<ArticleFilter>) {
 
   if (searchQuery) filter.search = searchQuery;
   if (selectedSourceId) filter.sourceId = selectedSourceId;
+  if (selectedTag) filter.tag = selectedTag;
   if (currentView === 'starred') filter.isStarred = true;
   if (currentView === 'read') filter.isRead = true;
 
@@ -55,4 +56,35 @@ export function useMarkAsRead() {
   return (id: string) => {
     updateArticle.mutate({ id, data: { isRead: true } });
   };
+}
+
+export function useTranscribeArticle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: ['transcribe-article'],
+    mutationFn: (id: string) => articlesApi.transcribe(id),
+    onSuccess: (data, id) => {
+      // Invalidate the specific article to fetch the new contentText and contentHtml
+      queryClient.invalidateQueries({ queryKey: ['articles', id] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+    },
+  });
+}
+
+export function useIdentifySpeakers() {
+  return useMutation({
+    mutationFn: (id: string) => articlesApi.identifySpeakers(id),
+  });
+}
+
+export function useApplySpeakerMapping() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, mapping }: { id: string; mapping: Record<string, string> }) =>
+      articlesApi.applySpeakerMapping(id, mapping),
+    onSuccess: (data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['articles', id] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+    },
+  });
 }

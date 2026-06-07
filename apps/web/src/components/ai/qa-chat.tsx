@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Send, User, Sparkles, Globe } from 'lucide-react';
+import { Send, User, Sparkles, Globe, AlertCircle, Loader2 } from 'lucide-react';
 import { useAiStream } from '@/hooks/use-ai';
 import type { AIModel } from '@knowflow/shared';
 
@@ -12,7 +12,7 @@ interface QAChatProps {
 }
 
 interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'error';
   content: string;
 }
 
@@ -20,7 +20,7 @@ export function QAChat({ articleId, model }: QAChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [webSearch, setWebSearch] = useState(false);
-  const { content: streamContent, isStreaming, startStream, reset } = useAiStream();
+  const { content: streamContent, isStreaming, error, startStream, reset } = useAiStream();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevStreamContent = useRef('');
 
@@ -32,7 +32,7 @@ export function QAChat({ articleId, model }: QAChatProps) {
     reset();
   }, [articleId, reset]);
 
-  // When streaming finishes, add the full message
+  // When streaming finishes, add the full message or error
   useEffect(() => {
     if (!isStreaming && prevStreamContent.current && streamContent) {
       setMessages((prev) => [...prev, { role: 'assistant', content: streamContent }]);
@@ -42,6 +42,13 @@ export function QAChat({ articleId, model }: QAChatProps) {
       prevStreamContent.current = streamContent;
     }
   }, [isStreaming, streamContent]);
+
+  // Show errors as chat messages
+  useEffect(() => {
+    if (error && !isStreaming) {
+      setMessages((prev) => [...prev, { role: 'error', content: error }]);
+    }
+  }, [error, isStreaming]);
 
   // Auto-scroll
   useEffect(() => {
@@ -65,7 +72,7 @@ export function QAChat({ articleId, model }: QAChatProps) {
   return (
     <div className="flex h-full flex-col">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-4">
         {messages.length === 0 && !isStreaming && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Sparkles className="h-8 w-8 mb-3 opacity-40" />
@@ -88,14 +95,22 @@ export function QAChat({ articleId, model }: QAChatProps) {
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
               </div>
             )}
+            {msg.role === 'error' && (
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+              </div>
+            )}
             <div
               className={cn(
-                'max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
+                'max-w-[85%] min-w-0 rounded-xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words',
                 msg.role === 'user'
                   ? 'bg-primary text-primary-foreground rounded-br-sm'
+                  : msg.role === 'error'
+                  ? 'bg-destructive/10 text-destructive border border-destructive/20 rounded-bl-sm'
                   : 'bg-muted text-foreground rounded-bl-sm'
               )}
             >
+              {msg.role === 'error' && <span className="font-medium">请求失败: </span>}
               {msg.content}
             </div>
             {msg.role === 'user' && (
@@ -112,9 +127,21 @@ export function QAChat({ articleId, model }: QAChatProps) {
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
               <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse-subtle" />
             </div>
-            <div className="max-w-[85%] rounded-xl rounded-bl-sm bg-muted px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
+            <div className="max-w-[85%] min-w-0 rounded-xl rounded-bl-sm bg-muted px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words">
               {streamContent}
               <span className="inline-block w-1.5 h-3.5 bg-primary ml-0.5 animate-pulse-subtle rounded-sm" />
+            </div>
+          </div>
+        )}
+
+        {/* Loading indicator when streaming but no content yet */}
+        {isStreaming && !streamContent && (
+          <div className="flex gap-2.5 justify-start">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+            </div>
+            <div className="max-w-[85%] min-w-0 rounded-xl rounded-bl-sm bg-muted px-3.5 py-2.5 text-sm leading-relaxed text-muted-foreground">
+              正在思考...
             </div>
           </div>
         )}

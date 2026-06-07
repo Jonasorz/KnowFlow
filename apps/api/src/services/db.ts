@@ -9,8 +9,6 @@ import { sql } from 'drizzle-orm';
 export async function initializeDatabase(): Promise<void> {
   const db = getDatabase();
 
-  // Create all tables using CREATE TABLE IF NOT EXISTS
-  // This is idempotent and safe to run on every startup.
   db.run(sql`
     CREATE TABLE IF NOT EXISTS sources (
       id TEXT PRIMARY KEY,
@@ -22,10 +20,17 @@ export async function initializeDatabase(): Promise<void> {
       config TEXT,
       is_active INTEGER NOT NULL DEFAULT 1,
       last_sync_at TEXT,
+      tags TEXT DEFAULT '[]',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  try {
+    db.run(sql`ALTER TABLE sources ADD COLUMN tags TEXT DEFAULT '[]'`);
+  } catch (e) {
+    // Ignore error if column already exists
+  }
 
   db.run(sql`
     CREATE TABLE IF NOT EXISTS articles (
@@ -41,6 +46,10 @@ export async function initializeDatabase(): Promise<void> {
       read_count INTEGER,
       like_count INTEGER,
       comment_count INTEGER,
+      audio_url TEXT,
+      duration INTEGER,
+      transcript_text TEXT,
+      transcript_html TEXT,
       is_read INTEGER NOT NULL DEFAULT 0,
       is_starred INTEGER NOT NULL DEFAULT 0,
       published_at TEXT,
@@ -48,6 +57,30 @@ export async function initializeDatabase(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  try {
+    db.run(sql`ALTER TABLE articles ADD COLUMN audio_url TEXT`);
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+
+  try {
+    db.run(sql`ALTER TABLE articles ADD COLUMN duration INTEGER`);
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+
+  try {
+    db.run(sql`ALTER TABLE articles ADD COLUMN transcript_text TEXT`);
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+
+  try {
+    db.run(sql`ALTER TABLE articles ADD COLUMN transcript_html TEXT`);
+  } catch (e) {
+    // Ignore error if column already exists
+  }
 
   db.run(sql`
     CREATE TABLE IF NOT EXISTS ai_results (

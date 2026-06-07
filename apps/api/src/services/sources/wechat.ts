@@ -91,39 +91,8 @@ export class WechatApiService {
     return response.json() as Promise<T>;
   }
 
-  /**
-   * Search WeChat official accounts by keyword.
-   */
   async searchAccount(query: string): Promise<WechatAccountSearchResult[]> {
-    const cacheKey = `wechat:search:${query}`;
-    const cached = cache.get<WechatAccountSearchResult[]>(cacheKey);
-    if (cached) return cached;
-
-    const data = await this.post<{
-      code: number;
-      data: Array<{
-        name: string;
-        biz: string;
-        avatar?: string;
-        owner_name?: string;
-        fans?: number;
-        avg_top_read?: number;
-      }>;
-    }>('wx_account/search', { keyword: query });
-
-    console.log('[Search WeChat] Raw data from Dajiala:', JSON.stringify(data));
-
-    const results: WechatAccountSearchResult[] = (data.data || []).map((item) => ({
-      name: item.name,
-      biz: item.biz,
-      avatar: item.avatar,
-      description: item.owner_name,
-      fans: item.fans,
-      avgTopRead: item.avg_top_read,
-    }));
-
-    cache.set(cacheKey, results, CACHE_TTL.SEARCH);
-    return results;
+    throw new Error('微信公众号搜索接口已停用，以防产生高额按条查询费用。请直接在“手动添加”标签页中输入 Biz ID 或文章链接来订阅公众号（该方式完全免费，不调用收费接口）。');
   }
 
   /**

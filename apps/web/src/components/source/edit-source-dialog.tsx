@@ -22,6 +22,7 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
   const [name, setName] = useState(source.name);
   const [description, setDescription] = useState(source.description || '');
   const [avatarUrl, setAvatarUrl] = useState(source.avatarUrl || '');
+  const [tagsString, setTagsString] = useState('');
   const [error, setError] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,6 +34,7 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
     setName(source.name);
     setDescription(source.description || '');
     setAvatarUrl(source.avatarUrl || '');
+    setTagsString(source.tags ? source.tags.join(', ') : '');
     setError('');
   }, [source, open]);
 
@@ -71,6 +73,11 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
       return;
     }
 
+    const parsedTags = tagsString
+      .split(/[\s,，;；]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+
     try {
       await updateSource.mutateAsync({
         id: source.id,
@@ -78,6 +85,7 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
           name: name.trim(),
           description: description.trim() || undefined,
           avatarUrl: avatarUrl.trim() || undefined,
+          tags: parsedTags,
         },
       });
       onOpenChange(false);
@@ -177,6 +185,15 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full min-h-[60px] text-xs p-3 rounded-lg border border-border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-foreground">标签/分组 (用逗号分隔，可选)</label>
+            <Input
+              placeholder="例如: 科技, AI, 商业"
+              value={tagsString}
+              onChange={(e) => setTagsString(e.target.value)}
             />
           </div>
 

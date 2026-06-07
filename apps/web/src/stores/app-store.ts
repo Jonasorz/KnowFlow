@@ -27,10 +27,14 @@ interface AppState {
   selectedSourceId: string | null;
   setSelectedSourceId: (id: string | null) => void;
 
+  // Selected tag
+  selectedTag: string | null;
+  setSelectedTag: (tag: string | null) => void;
+
   // Search
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-
+  
   // Sort
   sortBy: 'publishedAt' | 'readCount' | 'createdAt';
   sortOrder: 'asc' | 'desc';
@@ -64,6 +68,28 @@ interface AppState {
   aiSidebarWidth: number;
   setSidebarWidth: (width: number) => void;
   setAiSidebarWidth: (width: number) => void;
+
+  // Balance query caching
+  balances: {
+    dajiala: any | null;
+    twitter: any | null;
+    moonshot: any | null;
+    deepseek: any | null;
+    tavily: any | null;
+    openrouter: any | null;
+    dashscope: any | null;
+  };
+  balancesLastUpdated: {
+    dajiala: string | null;
+    twitter: string | null;
+    moonshot: string | null;
+    deepseek: string | null;
+    tavily: string | null;
+    openrouter: string | null;
+    dashscope: string | null;
+  };
+  setBalance: (provider: 'dajiala' | 'twitter' | 'moonshot' | 'deepseek' | 'tavily' | 'openrouter' | 'dashscope', data: any | null) => void;
+  clearBalances: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -94,11 +120,15 @@ export const useAppStore = create<AppState>()(
 
       // Article filtering
       currentView: 'all',
-      setCurrentView: (view) => set({ currentView: view, selectedSourceId: null }),
+      setCurrentView: (view) => set({ currentView: view, selectedSourceId: null, selectedTag: null }),
 
       // Selected source
       selectedSourceId: null,
-      setSelectedSourceId: (id) => set({ selectedSourceId: id, currentView: 'all' }),
+      setSelectedSourceId: (id) => set({ selectedSourceId: id, currentView: 'all', selectedTag: null }),
+
+      // Selected tag
+      selectedTag: null,
+      setSelectedTag: (tag) => set({ selectedTag: tag, selectedSourceId: null, currentView: 'all' }),
 
       // Search
       searchQuery: '',
@@ -125,6 +155,56 @@ export const useAppStore = create<AppState>()(
       aiSidebarWidth: 320,
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
       setAiSidebarWidth: (width) => set({ aiSidebarWidth: width }),
+
+      // Balance query caching
+      balances: {
+        dajiala: null,
+        twitter: null,
+        moonshot: null,
+        deepseek: null,
+        tavily: null,
+        openrouter: null,
+        dashscope: null,
+      },
+      balancesLastUpdated: {
+        dajiala: null,
+        twitter: null,
+        moonshot: null,
+        deepseek: null,
+        tavily: null,
+        openrouter: null,
+        dashscope: null,
+      },
+      setBalance: (provider, data) => set((s) => ({
+        balances: {
+          ...s.balances,
+          [provider]: data,
+        },
+        balancesLastUpdated: {
+          ...s.balancesLastUpdated,
+          [provider]: data === null ? null : new Date().toISOString(),
+        },
+      })),
+      clearBalances: () => set({
+        balances: {
+          dajiala: null,
+          twitter: null,
+          moonshot: null,
+          deepseek: null,
+          tavily: null,
+          openrouter: null,
+          dashscope: null,
+        },
+        balancesLastUpdated: {
+          dajiala: null,
+          twitter: null,
+          moonshot: null,
+          deepseek: null,
+          tavily: null,
+          openrouter: null,
+          dashscope: null,
+        },
+      }),
     }),
     {
       name: 'knowflow-app-store',
@@ -134,6 +214,8 @@ export const useAppStore = create<AppState>()(
         viewMode: state.viewMode,
         sidebarWidth: state.sidebarWidth,
         aiSidebarWidth: state.aiSidebarWidth,
+        balances: state.balances,
+        balancesLastUpdated: state.balancesLastUpdated,
       }),
     }
   )

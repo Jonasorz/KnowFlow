@@ -50,17 +50,18 @@ function extractMediaUrls(tweet: any, includes?: any): string[] {
   // Check direct media array if present (some scrapers do this)
   if (Array.isArray(tweet.media)) {
     for (const m of tweet.media) {
-      if (m.url || m.media_url_https || m.media_url) {
-        urls.push(m.url || m.media_url_https || m.media_url);
+      if (m.url || m.media_url_https || m.media_url || m.mediaUrl || m.mediaUrlHttps) {
+        urls.push(m.url || m.media_url_https || m.media_url || m.mediaUrl || m.mediaUrlHttps);
       }
     }
   }
 
-  // Check standard v1.1 extended_entities
-  if (tweet.extended_entities?.media && Array.isArray(tweet.extended_entities.media)) {
-    for (const m of tweet.extended_entities.media) {
-      if (m.media_url_https || m.media_url) {
-        urls.push(m.media_url_https || m.media_url);
+  // Check standard v1.1 extendedEntities (camelCase) or extended_entities (snake_case)
+  const extendedEntities = tweet.extendedEntities || tweet.extended_entities;
+  if (extendedEntities?.media && Array.isArray(extendedEntities.media)) {
+    for (const m of extendedEntities.media) {
+      if (m.media_url_https || m.media_url || m.mediaUrlHttps || m.mediaUrl) {
+        urls.push(m.media_url_https || m.media_url || m.mediaUrlHttps || m.mediaUrl);
       }
     }
   }
@@ -68,8 +69,8 @@ function extractMediaUrls(tweet: any, includes?: any): string[] {
   // Check standard v1.1 entities
   if (tweet.entities?.media && Array.isArray(tweet.entities.media)) {
     for (const m of tweet.entities.media) {
-      if (m.media_url_https || m.media_url) {
-        urls.push(m.media_url_https || m.media_url);
+      if (m.media_url_https || m.media_url || m.mediaUrlHttps || m.mediaUrl) {
+        urls.push(m.media_url_https || m.media_url || m.mediaUrlHttps || m.mediaUrl);
       }
     }
   }
@@ -84,7 +85,7 @@ function extractMediaUrls(tweet: any, includes?: any): string[] {
     const keyMap = new Map<string, string>();
     for (const m of includes.media) {
       if (m && m.media_key) {
-        keyMap.set(m.media_key, m.url || m.preview_image_url || '');
+        keyMap.set(m.media_key, m.url || m.preview_image_url || m.previewImageUrl || '');
       }
     }
     for (const key of tweet.attachments.media_keys) {
@@ -96,8 +97,9 @@ function extractMediaUrls(tweet: any, includes?: any): string[] {
   }
 
   // Check for quoted tweet media recursively
-  if (tweet.quoted_tweet) {
-    urls.push(...extractMediaUrls(tweet.quoted_tweet, includes));
+  const quotedTweet = tweet.quoted_tweet || tweet.quotedTweet;
+  if (quotedTweet) {
+    urls.push(...extractMediaUrls(quotedTweet, includes));
   }
 
   return Array.from(new Set(urls.filter(Boolean)));
@@ -309,11 +311,12 @@ export class TwitterSource extends SourceAdapter {
 
       // Quote Tweet representation
       let quotedHtml = '';
-      if (tweet.quoted_tweet) {
-        const qAuthor = tweet.quoted_tweet.author?.name || tweet.quoted_tweet.author?.userName || 'Twitter User';
-        const qHandle = tweet.quoted_tweet.author?.userName || '';
-        const qText = formatTweetTextToHtml(tweet.quoted_tweet.text, tweet.quoted_tweet.entities);
-        const qMediaUrls = extractMediaUrls(tweet.quoted_tweet, includes);
+      const qTweet = tweet.quoted_tweet || tweet.quotedTweet;
+      if (qTweet) {
+        const qAuthor = qTweet.author?.name || qTweet.author?.userName || 'Twitter User';
+        const qHandle = qTweet.author?.userName || '';
+        const qText = formatTweetTextToHtml(qTweet.text, qTweet.entities);
+        const qMediaUrls = extractMediaUrls(qTweet, includes);
         
         let qMediaHtml = '';
         if (qMediaUrls.length > 0) {

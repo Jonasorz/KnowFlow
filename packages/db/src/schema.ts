@@ -14,6 +14,7 @@ export const sources = sqliteTable('sources', {
   config: text('config', { mode: 'json' }).$type<Record<string, unknown>>(), // source-specific config
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   lastSyncAt: text('last_sync_at'),
+  tags: text('tags', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
   updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
 });
@@ -34,6 +35,10 @@ export const articles = sqliteTable('articles', {
   readCount: integer('read_count'),
   likeCount: integer('like_count'),
   commentCount: integer('comment_count'),
+  audioUrl: text('audio_url'),
+  duration: integer('duration'),
+  transcriptText: text('transcript_text'),
+  transcriptHtml: text('transcript_html'),
   isRead: integer('is_read', { mode: 'boolean' }).notNull().default(false),
   isStarred: integer('is_starred', { mode: 'boolean' }).notNull().default(false),
   publishedAt: text('published_at'),

@@ -13,6 +13,7 @@ export const createSourceSchema = z.object({
   avatarUrl: z.string().optional(),
   description: z.string().optional(),
   config: z.record(z.unknown()).optional(),
+  tags: z.array(z.string()).optional(),
 });
 export type CreateSourceInput = z.infer<typeof createSourceSchema>;
 
@@ -21,6 +22,7 @@ export type CreateSourceInput = z.infer<typeof createSourceSchema>;
 // ============================================================
 export const articleFilterSchema = z.object({
   sourceId: z.string().optional(),
+  tag: z.string().optional(),
   isRead: z.boolean().optional(),
   isStarred: z.boolean().optional(),
   search: z.string().optional(),
@@ -40,15 +42,8 @@ export type UpdateArticleInput = z.infer<typeof updateArticleSchema>;
 // ============================================================
 // AI schemas
 // ============================================================
-export const aiModelSchema = z.enum([
-  'gpt-4o',
-  'gpt-4o-mini',
-  'claude-sonnet',
-  'claude-haiku',
-  'deepseek-chat',
-  'deepseek-reasoner',
-]);
-export type AIModel = z.infer<typeof aiModelSchema>;
+export const aiModelSchema = z.string();
+export type AIModel = string;
 
 export const aiSkillSchema = z.enum(['summary', 'qa', 'mindmap']);
 export type AISkill = z.infer<typeof aiSkillSchema>;
@@ -68,11 +63,12 @@ export type AIRequest = z.infer<typeof aiRequestSchema>;
 export const settingsSchema = z.object({
   // API Keys
   dajialaApiKey: z.string().optional(),
-  openaiApiKey: z.string().optional(),
-  anthropicApiKey: z.string().optional(),
+  moonshotApiKey: z.string().optional(),
   deepseekApiKey: z.string().optional(),
   twitterApiKey: z.string().optional(),
   tavilyApiKey: z.string().optional(), // Tavily Search API key
+  openrouterApiKey: z.string().optional(), // OpenRouter API key
+  dashscopeApiKey: z.string().optional(), // Alibaba Cloud DashScope API Key (for Tongyi Tingwu)
 
   // Preferences
   defaultAIModel: aiModelSchema.default('deepseek-chat'),
@@ -82,5 +78,7 @@ export const settingsSchema = z.object({
   // AI Prompt Templates
   summarySystemPrompt: z.string().optional(),
   summaryUserPrompt: z.string().optional(),
+  podcastSummarySystemPrompt: z.string().optional(),
+  podcastSummaryUserPrompt: z.string().optional(),
 });
 export type Settings = z.infer<typeof settingsSchema>;

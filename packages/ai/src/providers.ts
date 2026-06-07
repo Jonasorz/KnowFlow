@@ -1,12 +1,11 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { createAnthropic } from '@ai-sdk/anthropic';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 import type { AIModel } from '@knowflow/shared';
 
 export interface ProviderConfig {
-  openaiApiKey?: string;
-  anthropicApiKey?: string;
+  moonshotApiKey?: string;
   deepseekApiKey?: string;
+  openrouterApiKey?: string;
 }
 
 /**
@@ -14,18 +13,24 @@ export interface ProviderConfig {
  * Uses the Vercel AI SDK unified interface.
  */
 export function createProviders(config: ProviderConfig) {
-  const providers: Record<string, ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createDeepSeek>> = {};
+  const providers: Record<string, ReturnType<typeof createOpenAI> | ReturnType<typeof createDeepSeek>> = {};
 
-  if (config.openaiApiKey) {
-    providers.openai = createOpenAI({ apiKey: config.openaiApiKey });
-  }
-
-  if (config.anthropicApiKey) {
-    providers.anthropic = createAnthropic({ apiKey: config.anthropicApiKey });
+  if (config.moonshotApiKey) {
+    providers.moonshot = createOpenAI({
+      baseURL: 'https://api.moonshot.cn/v1',
+      apiKey: config.moonshotApiKey,
+    });
   }
 
   if (config.deepseekApiKey) {
     providers.deepseek = createDeepSeek({ apiKey: config.deepseekApiKey });
+  }
+
+  if (config.openrouterApiKey) {
+    providers.openrouter = createOpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: config.openrouterApiKey,
+    });
   }
 
   return providers;
@@ -34,11 +39,10 @@ export function createProviders(config: ProviderConfig) {
 /**
  * Map model names to their provider model identifiers.
  */
-const MODEL_MAP: Record<AIModel, { provider: string; model: string }> = {
-  'gpt-4o': { provider: 'openai', model: 'gpt-4o' },
-  'gpt-4o-mini': { provider: 'openai', model: 'gpt-4o-mini' },
-  'claude-sonnet': { provider: 'anthropic', model: 'claude-sonnet-4-20250514' },
-  'claude-haiku': { provider: 'anthropic', model: 'claude-haiku-4-20250414' },
+const MODEL_MAP: Record<string, { provider: string; model: string }> = {
+  'kimi-k2.6': { provider: 'moonshot', model: 'kimi-k2.6' },
+  'kimi-8k': { provider: 'moonshot', model: 'moonshot-v1-8k' },
+  'kimi-32k': { provider: 'moonshot', model: 'moonshot-v1-32k' },
   'deepseek-chat': { provider: 'deepseek', model: 'deepseek-chat' },
   'deepseek-reasoner': { provider: 'deepseek', model: 'deepseek-reasoner' },
 };
@@ -47,6 +51,19 @@ const MODEL_MAP: Record<AIModel, { provider: string; model: string }> = {
  * Get the language model instance for a given model name.
  */
 export function getModel(modelName: AIModel, config: ProviderConfig) {
+  if (modelName.startsWith('openrouter/')) {
+    const openrouterModel = modelName.replace('openrouter/', '');
+    const providers = createProviders(config);
+    const provider = providers.openrouter;
+    if (!provider) {
+      throw new Error(
+        'API key not configured for provider: openrouter. ' +
+        'Please set the openrouter API key in settings.'
+      );
+    }
+    return (provider as CallableFunction)(openrouterModel);
+  }
+
   const mapping = MODEL_MAP[modelName];
   if (!mapping) {
     throw new Error(`Unknown model: ${modelName}`);
@@ -65,4 +82,16 @@ export function getModel(modelName: AIModel, config: ProviderConfig) {
   return (provider as CallableFunction)(mapping.model);
 }
 
+/**
+ * Get execution settings (like temperature) for specific models.
+ */
+export function getModelSettings(modelName: AIModel) {
+  if (modelName === 'kimi-k2.6') {
+    return { temperature: 1 };
+  }
+  return {};
+}
+
 export { MODEL_MAP };
+
+

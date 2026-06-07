@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '@knowflow/db';
 import { schema } from '@knowflow/db';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, inArray, or } from 'drizzle-orm';
 import {
   createSourceSchema,
   type ApiResponse,
@@ -11,6 +11,7 @@ import {
 } from '@knowflow/shared';
 import { WechatSource } from '../services/sources/wechat.js';
 import { TwitterSource } from '../services/sources/twitter.js';
+import { PodcastSource } from '../services/sources/podcast.js';
 import { getDajialaApiKey, getTwitterApiKey } from '../services/settings.js';
 
 const { sources, articles } = schema;
@@ -24,11 +25,20 @@ sourcesRoutes.post('/search', async (c) => {
   const body = await c.req.json<{ query: string; type?: string }>();
   const { query, type = 'wechat' } = body;
 
-  if (type !== 'wechat' && type !== 'twitter') {
+  if (type !== 'wechat' && type !== 'twitter' && type !== 'podcast') {
     return c.json<ApiResponse>(
       { success: false, error: `Source type "${type}" is not supported yet` },
       400
     );
+  }
+
+  if (type === 'podcast') {
+    const podcast = new PodcastSource();
+    const results = await podcast.search(query);
+    return c.json<ApiResponse<any[]>>({
+      success: true,
+      data: results,
+    });
   }
 
   if (type === 'twitter') {
@@ -47,51 +57,20 @@ sourcesRoutes.post('/search', async (c) => {
     });
   }
 
-  const apiKey = await getDajialaApiKey();
-  if (!apiKey) {
-    return c.json<ApiResponse>(
-      { success: false, error: 'WeChat API key (dajialaApiKey) is not configured. Please set it in Settings.' },
-      400
-    );
-  }
-
-  const wechat = new WechatSource(apiKey);
-  const results = await wechat.search(query);
-
-  return c.json<ApiResponse<any[]>>({
-    success: true,
-    data: results,
-  });
+  return c.json<ApiResponse>(
+    { success: false, error: '微信公众号搜索接口已停用，以防产生高额按条查询费用。请直接在“手动添加”标签页中输入 Biz ID 或文章链接来订阅公众号（该方式完全免费，不调用收费接口）。' },
+    400
+  );
 });
 
 // ============================================================
 // GET /wechat/search — search for WeChat accounts (frontend GET version)
 // ============================================================
 sourcesRoutes.get('/wechat/search', async (c) => {
-  const query = c.req.query('q');
-
-  if (!query || query.trim().length === 0) {
-    return c.json<ApiResponse>(
-      { success: false, error: 'Search query parameter "q" is required' },
-      400
-    );
-  }
-
-  const apiKey = await getDajialaApiKey();
-  if (!apiKey) {
-    return c.json<ApiResponse>(
-      { success: false, error: 'WeChat API key (dajialaApiKey) is not configured. Please set it in Settings.' },
-      400
-    );
-  }
-
-  const wechat = new WechatSource(apiKey);
-  const results = await wechat.search(query);
-
-  return c.json<ApiResponse<any[]>>({
-    success: true,
-    data: results,
-  });
+  return c.json<ApiResponse>(
+    { success: false, error: '微信公众号搜索接口已停用，以防产生高额按条查询费用。请直接在“手动添加”标签页中输入 Biz ID 或文章链接来订阅公众号（该方式完全免费，不调用收费接口）。' },
+    400
+  );
 });
 
 // ============================================================
@@ -125,6 +104,34 @@ sourcesRoutes.get('/twitter/search', async (c) => {
 });
 
 // ============================================================
+// GET /podcast/search — search for podcasts
+// ============================================================
+sourcesRoutes.get('/podcast/search', async (c) => {
+  const query = c.req.query('q');
+
+  if (!query || query.trim().length === 0) {
+    return c.json<ApiResponse>(
+      { success: false, error: 'Search query parameter "q" is required' },
+      400
+    );
+  }
+
+  try {
+    const podcast = new PodcastSource();
+    const results = await podcast.search(query);
+    return c.json<ApiResponse<any[]>>({
+      success: true,
+      data: results,
+    });
+  } catch (err) {
+    return c.json<ApiResponse>(
+      { success: false, error: err instanceof Error ? err.message : String(err) },
+      500
+    );
+  }
+});
+
+// ============================================================
 // GET /wechat/parse-biz — extract biz ID from a WeChat article URL
 // ============================================================
 sourcesRoutes.get('/wechat/parse-biz', async (c) => {
@@ -137,25 +144,25 @@ sourcesRoutes.get('/wechat/parse-biz', async (c) => {
     );
   }
 
-  // 1. Try to extract directly from query params first
+  // 1. Try to extract fallback biz directly from URL query params
+  let fallbackBiz = '';
   try {
     const parsedUrl = new URL(url);
-    const biz = parsedUrl.searchParams.get('__biz');
-    if (biz) {
-      return c.json({ success: true, data: { biz } });
-    }
+    fallbackBiz = parsedUrl.searchParams.get('__biz') || '';
   } catch (e) {
-    // Ignore URL parse error and fall back to fetching
+    // Ignore URL parse error
   }
 
   // Double check in-text matching: __biz=xxx (in case URL parser missed it)
-  const regexBiz = /__biz=([^&"'\s#]+)/;
-  const matchBiz = url.match(regexBiz);
-  if (matchBiz && matchBiz[1]) {
-    return c.json({ success: true, data: { biz: matchBiz[1] } });
+  if (!fallbackBiz) {
+    const regexBiz = /__biz=([^&"'\s#]+)/;
+    const matchBiz = url.match(regexBiz);
+    if (matchBiz && matchBiz[1]) {
+      fallbackBiz = matchBiz[1];
+    }
   }
 
-  // 2. Fetch page and parse
+  // 2. Fetch page and parse biz, name, and avatarUrl
   try {
     const response = await fetch(url, {
       headers: {
@@ -164,6 +171,12 @@ sourcesRoutes.get('/wechat/parse-biz', async (c) => {
     });
 
     if (!response.ok) {
+      if (fallbackBiz) {
+        return c.json({
+          success: true,
+          data: { biz: fallbackBiz, name: '微信公众号', avatarUrl: '' }
+        });
+      }
       return c.json<ApiResponse>(
         { success: false, error: `Failed to fetch WeChat page: ${response.statusText}` },
         400
@@ -172,36 +185,85 @@ sourcesRoutes.get('/wechat/parse-biz', async (c) => {
 
     const html = await response.text();
     
-    // Pattern matches
+    // Parse biz
+    let biz = '';
     const bizPattern = /biz:\s*["']([^"']+)["']/;
     const match1 = html.match(bizPattern);
     if (match1 && match1[1]) {
-      return c.json({ success: true, data: { biz: match1[1] } });
+      biz = match1[1];
+    } else {
+      const varBizPattern = /var\s+biz\s*=\s*["']([^"']+)["']/;
+      const match2 = html.match(varBizPattern);
+      if (match2 && match2[1]) {
+        biz = match2[1];
+      } else {
+        const appuinPattern = /appuin\s*:\s*["']([^"']+)["']/;
+        const match3 = html.match(appuinPattern);
+        if (match3 && match3[1]) {
+          biz = match3[1];
+        }
+      }
     }
 
-    const varBizPattern = /var\s+biz\s*=\s*["']([^"']+)["']/;
-    const match2 = html.match(varBizPattern);
-    if (match2 && match2[1]) {
-      return c.json({ success: true, data: { biz: match2[1] } });
+    // Use fallback if still not found
+    biz = biz || fallbackBiz;
+
+    if (!biz) {
+      return c.json<ApiResponse>(
+        { success: false, error: 'Could not extract Biz ID from WeChat page HTML.' },
+        400
+      );
     }
 
-    const appuinPattern = /appuin\s*:\s*["']([^"']+)["']/;
-    const match3 = html.match(appuinPattern);
-    if (match3 && match3[1]) {
-      return c.json({ success: true, data: { biz: match3[1] } });
+    // Parse name/nickname
+    let name = '';
+    const nicknamePattern1 = /var\s+nickname\s*=\s*htmlDecode\(["']([^"']+)["']\)/;
+    const matchNick1 = html.match(nicknamePattern1);
+    if (matchNick1 && matchNick1[1]) {
+      name = matchNick1[1];
+    } else {
+      const nicknamePattern2 = /var\s+nickname\s*=\s*["']([^"']+)["']/;
+      const matchNick2 = html.match(nicknamePattern2);
+      if (matchNick2 && matchNick2[1]) {
+        name = matchNick2[1];
+      } else {
+        const profileNicknamePattern = /<strong[^>]*class=["']profile_nickname["'][^>]*>\s*([^<\s]+)\s*<\/strong>/;
+        const matchNick3 = html.match(profileNicknamePattern);
+        if (matchNick3 && matchNick3[1]) {
+          name = matchNick3[1];
+        }
+      }
     }
 
-    const queryBizPattern = /__biz=([^&"'\s#]+)/;
-    const match4 = html.match(queryBizPattern);
-    if (match4 && match4[1]) {
-      return c.json({ success: true, data: { biz: match4[1] } });
+    // Parse avatarUrl
+    let avatarUrl = '';
+    const roundHeadPattern1 = /var\s+round_head_img\s*=\s*["']([^"']+)["']/;
+    const matchAvatar1 = html.match(roundHeadPattern1);
+    if (matchAvatar1 && matchAvatar1[1]) {
+      avatarUrl = matchAvatar1[1];
+    } else {
+      const roundHeadPattern2 = /round_head_img\s*:\s*["']([^"']+)["']/;
+      const matchAvatar2 = html.match(roundHeadPattern2);
+      if (matchAvatar2 && matchAvatar2[1]) {
+        avatarUrl = matchAvatar2[1];
+      }
     }
 
-    return c.json<ApiResponse>(
-      { success: false, error: 'Could not extract Biz ID from WeChat page HTML.' },
-      400
-    );
+    return c.json({
+      success: true,
+      data: {
+        biz,
+        name: name || '微信公众号',
+        avatarUrl,
+      },
+    });
   } catch (err) {
+    if (fallbackBiz) {
+      return c.json({
+        success: true,
+        data: { biz: fallbackBiz, name: '微信公众号', avatarUrl: '' }
+      });
+    }
     return c.json<ApiResponse>(
       { success: false, error: err instanceof Error ? err.message : 'Error fetching WeChat page' },
       500
@@ -275,6 +337,132 @@ sourcesRoutes.post('/', async (c) => {
 });
 
 // ============================================================
+// POST /bulk-import — bulk import sources (currently Twitter)
+// ============================================================
+sourcesRoutes.post('/bulk-import', async (c) => {
+  const body = await c.req.json<{
+    type: string;
+    identifiers?: string[];
+    sources?: Array<{ name: string; identifier: string; description?: string; avatarUrl?: string }>;
+  }>();
+  const { type, identifiers, sources: inputSources } = body;
+
+  if (type !== 'twitter') {
+    return c.json<ApiResponse>({ success: false, error: 'Only twitter bulk import is supported currently' }, 400);
+  }
+
+  const db = getDatabase();
+  const apiKey = await getTwitterApiKey();
+  const results: Array<{ identifier: string; success: boolean; error?: string }> = [];
+
+  // Case A: Import from sources array (e.g. from CSV)
+  if (Array.isArray(inputSources) && inputSources.length > 0) {
+    for (const item of inputSources) {
+      let handle = item.identifier.trim();
+      if (handle.startsWith('@')) {
+        handle = handle.substring(1);
+      }
+      if (!handle) continue;
+
+      // Check duplicate
+      const existing = db
+        .select()
+        .from(sources)
+        .where(eq(sources.identifier, handle))
+        .get();
+
+      if (existing) {
+        results.push({ identifier: handle, success: true });
+        continue;
+      }
+
+      try {
+        const newSource: schema.NewSource = {
+          id: uuidv4(),
+          type: 'twitter',
+          name: item.name.trim() || handle,
+          identifier: handle,
+          avatarUrl: item.avatarUrl?.trim() || null,
+          description: item.description?.trim() || null,
+          isActive: true,
+        };
+        db.insert(sources).values(newSource).run();
+        results.push({ identifier: handle, success: true });
+      } catch (err) {
+        results.push({ identifier: handle, success: false, error: err instanceof Error ? err.message : String(err) });
+      }
+    }
+  }
+  // Case B: Import from identifiers array (e.g. from copy-pasting handles)
+  else if (Array.isArray(identifiers) && identifiers.length > 0) {
+    for (const rawId of identifiers) {
+      let handle = rawId.trim();
+      if (handle.startsWith('@')) {
+        handle = handle.substring(1);
+      }
+      if (!handle) continue;
+
+      const existing = db
+        .select()
+        .from(sources)
+        .where(eq(sources.identifier, handle))
+        .get();
+
+      if (existing) {
+        results.push({ identifier: handle, success: true });
+        continue;
+      }
+
+      let name = handle;
+      let avatarUrl: string | undefined;
+      let description: string | undefined;
+
+      if (apiKey) {
+        try {
+          const response = await fetch(`https://api.twitterapi.io/twitter/user/info?userName=${handle}`, {
+            headers: { 'X-API-Key': apiKey },
+          });
+          if (response.ok) {
+            const resData = await response.json() as any;
+            const user = resData?.user || resData;
+            if (user) {
+              name = user.name || handle;
+              avatarUrl = user.profilePicture || user.profile_image_url_https || user.avatar;
+              description = user.description;
+            }
+          }
+        } catch (err) {
+          console.warn(`Failed to lookup profile for ${handle} during bulk import:`, err);
+        }
+      }
+
+      try {
+        const newSource: schema.NewSource = {
+          id: uuidv4(),
+          type: 'twitter',
+          name,
+          identifier: handle,
+          avatarUrl: avatarUrl ?? null,
+          description: description ?? null,
+          isActive: true,
+        };
+        db.insert(sources).values(newSource).run();
+        results.push({ identifier: handle, success: true });
+      } catch (err) {
+        results.push({ identifier: handle, success: false, error: err instanceof Error ? err.message : String(err) });
+      }
+    }
+  } else {
+    return c.json<ApiResponse>({ success: false, error: 'Either identifiers or sources array must be provided' }, 400);
+  }
+
+  return c.json<ApiResponse>({
+    success: true,
+    data: results,
+  });
+});
+
+// ============================================================
 // GET / — list all sources
 // ============================================================
 sourcesRoutes.get('/', async (c) => {
@@ -303,6 +491,7 @@ sourcesRoutes.get('/', async (c) => {
     isActive: s.isActive,
     lastSyncAt: s.lastSyncAt ?? undefined,
     articleCount: countMap.get(s.id) ?? 0,
+    tags: s.tags ?? [],
     createdAt: s.createdAt,
   }));
 
@@ -373,6 +562,7 @@ sourcesRoutes.patch('/:id', async (c) => {
   if (updates.description !== undefined) setValues.description = updates.description;
   if (updates.avatarUrl !== undefined) setValues.avatarUrl = updates.avatarUrl;
   if (updates.config !== undefined) setValues.config = updates.config;
+  if (updates.tags !== undefined) setValues.tags = updates.tags;
   
   // Allow toggling isActive directly
   const rawBody = body as { isActive?: boolean };
@@ -398,6 +588,7 @@ sourcesRoutes.patch('/:id', async (c) => {
       description: updatedSource!.description ?? undefined,
       isActive: updatedSource!.isActive,
       lastSyncAt: updatedSource!.lastSyncAt ?? undefined,
+      tags: updatedSource!.tags ?? [],
       createdAt: updatedSource!.createdAt,
     },
     message: 'Source updated successfully',
@@ -432,6 +623,7 @@ sourcesRoutes.post('/sync', async (c) => {
 
       const isFirstSync = !source.lastSyncAt;
       const pagesToFetch = isFirstSync ? [1, 2, 3] : [1];
+      const articlesToInsert: schema.NewArticle[] = [];
 
       for (const page of pagesToFetch) {
         try {
@@ -447,7 +639,7 @@ sourcesRoutes.post('/sync', async (c) => {
 
             if (existing) continue;
 
-            const newArticle: schema.NewArticle = {
+            articlesToInsert.push({
               id: uuidv4(),
               sourceId: source.id,
               title: article.title,
@@ -459,15 +651,21 @@ sourcesRoutes.post('/sync', async (c) => {
               fetchedAt: new Date().toISOString(),
               isRead: false,
               isStarred: false,
-            };
-
-            db.insert(articles).values(newArticle).run();
-            newCount++;
+            });
           }
         } catch (err) {
           console.error(`Error syncing WeChat page ${page} for source ${source.name}:`, err);
           break;
         }
+      }
+
+      if (articlesToInsert.length > 0) {
+        db.transaction(() => {
+          for (const item of articlesToInsert) {
+            db.insert(articles).values(item).run();
+          }
+        });
+        newCount += articlesToInsert.length;
       }
     } else if (source.type === 'twitter') {
       if (!twitter) {
@@ -476,9 +674,37 @@ sourcesRoutes.post('/sync', async (c) => {
         continue;
       }
 
+      // Automatically fetch and update avatar/bio during sync if missing
+      if (!source.avatarUrl && twitterApiKey) {
+        try {
+          const response = await fetch(`https://api.twitterapi.io/twitter/user/info?userName=${source.identifier}`, {
+            headers: { 'X-API-Key': twitterApiKey },
+          });
+          if (response.ok) {
+            const resData = await response.json() as any;
+            const user = resData?.user || resData;
+            if (user) {
+              const avatarUrl = user.profilePicture || user.profile_image_url_https || user.avatar;
+              const description = user.description;
+              if (avatarUrl) {
+                db.update(sources)
+                  .set({ avatarUrl, description: description || source.description, updatedAt: new Date().toISOString() })
+                  .where(eq(sources.id, source.id))
+                  .run();
+                source.avatarUrl = avatarUrl;
+                if (description) source.description = description;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn(`Failed to auto-update avatar for source ${source.identifier} during sync:`, e);
+        }
+      }
+
       try {
         const fetchedTweets = await twitter.fetchArticles(source.identifier);
         if (fetchedTweets.length > 0) {
+          const tweetsToInsert: schema.NewArticle[] = [];
           for (const tweet of fetchedTweets) {
             const existing = db
               .select({ id: articles.id })
@@ -488,7 +714,7 @@ sourcesRoutes.post('/sync', async (c) => {
 
             if (existing) continue;
 
-            const newArticle: schema.NewArticle = {
+            tweetsToInsert.push({
               id: uuidv4(),
               sourceId: source.id,
               title: tweet.title,
@@ -505,14 +731,76 @@ sourcesRoutes.post('/sync', async (c) => {
               likeCount: tweet.likeCount ?? null,
               readCount: tweet.readCount ?? null,
               commentCount: tweet.commentCount ?? null,
-            };
-
-            db.insert(articles).values(newArticle).run();
-            newCount++;
+            });
+          }
+          if (tweetsToInsert.length > 0) {
+            db.transaction(() => {
+              for (const item of tweetsToInsert) {
+                db.insert(articles).values(item).run();
+              }
+            });
+            newCount += tweetsToInsert.length;
           }
         }
       } catch (err) {
         console.error(`Error syncing Twitter source ${source.name}:`, err);
+      }
+    } else if (source.type === 'podcast') {
+      try {
+        const podcast = new PodcastSource();
+        const fetchedEpisodes = await podcast.fetchArticles(source.identifier);
+        if (fetchedEpisodes.length > 0) {
+          const episodesToInsert: schema.NewArticle[] = [];
+          for (const episode of fetchedEpisodes) {
+            const existing = db
+              .select({ id: articles.id, originalUrl: articles.originalUrl })
+              .from(articles)
+              .where(
+                episode.audioUrl
+                  ? or(eq(articles.originalUrl, episode.url), eq(articles.audioUrl, episode.audioUrl))
+                  : eq(articles.originalUrl, episode.url)
+              )
+              .get();
+
+            if (existing) {
+              if (episode.audioUrl && existing.originalUrl === episode.audioUrl && episode.url !== episode.audioUrl) {
+                db.update(articles)
+                  .set({ originalUrl: episode.url })
+                  .where(eq(articles.id, existing.id))
+                  .run();
+              }
+              continue;
+            }
+
+            episodesToInsert.push({
+              id: uuidv4(),
+              sourceId: source.id,
+              title: episode.title,
+              author: episode.author ?? null,
+              summary: episode.digest ?? null,
+              originalUrl: episode.url,
+              coverImageUrl: episode.cover ?? null,
+              publishedAt: episode.ctime,
+              fetchedAt: new Date().toISOString(),
+              isRead: false,
+              isStarred: false,
+              contentText: episode.contentText ?? null,
+              contentHtml: episode.contentHtml ?? null,
+              audioUrl: episode.audioUrl ?? null,
+              duration: episode.duration ?? null,
+            });
+          }
+          if (episodesToInsert.length > 0) {
+            db.transaction(() => {
+              for (const item of episodesToInsert) {
+                db.insert(articles).values(item).run();
+              }
+            });
+            newCount += episodesToInsert.length;
+          }
+        }
+      } catch (err) {
+        console.error(`Error syncing Podcast source ${source.name}:`, err);
       }
     } else {
       continue;
@@ -552,7 +840,7 @@ sourcesRoutes.post('/:id/sync', async (c) => {
     );
   }
 
-  if (source.type !== 'wechat' && source.type !== 'twitter') {
+  if (source.type !== 'wechat' && source.type !== 'twitter' && source.type !== 'podcast') {
     return c.json<ApiResponse>(
       { success: false, error: `Sync for source type "${source.type}" is not supported yet` },
       400
@@ -574,6 +862,7 @@ sourcesRoutes.post('/:id/sync', async (c) => {
     const wechat = new WechatSource(apiKey);
     const isFirstSync = !source.lastSyncAt;
     const pagesToFetch = isFirstSync ? [1, 2, 3] : [1];
+    const articlesToInsert: schema.NewArticle[] = [];
 
     for (const page of pagesToFetch) {
       try {
@@ -590,7 +879,7 @@ sourcesRoutes.post('/:id/sync', async (c) => {
 
           if (existing) continue;
 
-          const newArticle: schema.NewArticle = {
+          articlesToInsert.push({
             id: uuidv4(),
             sourceId: source.id,
             title: article.title,
@@ -602,16 +891,22 @@ sourcesRoutes.post('/:id/sync', async (c) => {
             fetchedAt: new Date().toISOString(),
             isRead: false,
             isStarred: false,
-          };
-
-          db.insert(articles).values(newArticle).run();
-          newCount++;
+          });
         }
       } catch (err) {
         console.error(`Error syncing WeChat page ${page} for source ${source.name}:`, err);
         if (page === 1) throw err;
         break;
       }
+    }
+
+    if (articlesToInsert.length > 0) {
+      db.transaction(() => {
+        for (const item of articlesToInsert) {
+          db.insert(articles).values(item).run();
+        }
+      });
+      newCount += articlesToInsert.length;
     }
   } else if (source.type === 'twitter') {
     const apiKey = await getTwitterApiKey();
@@ -623,9 +918,38 @@ sourcesRoutes.post('/:id/sync', async (c) => {
     }
 
     const twitter = new TwitterSource(apiKey);
+
+    // Automatically fetch and update avatar/bio during sync if missing
+    if (!source.avatarUrl) {
+      try {
+        const response = await fetch(`https://api.twitterapi.io/twitter/user/info?userName=${source.identifier}`, {
+          headers: { 'X-API-Key': apiKey },
+        });
+        if (response.ok) {
+          const resData = await response.json() as any;
+          const user = resData?.user || resData;
+          if (user) {
+            const avatarUrl = user.profilePicture || user.profile_image_url_https || user.avatar;
+            const description = user.description;
+            if (avatarUrl) {
+              db.update(sources)
+                .set({ avatarUrl, description: description || source.description, updatedAt: new Date().toISOString() })
+                .where(eq(sources.id, source.id))
+                .run();
+              source.avatarUrl = avatarUrl;
+              if (description) source.description = description;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`Failed to auto-update avatar for source ${source.identifier} during sync:`, e);
+      }
+    }
+
     try {
       const fetchedTweets = await twitter.fetchArticles(source.identifier);
       totalFetched = fetchedTweets.length;
+      const tweetsToInsert: schema.NewArticle[] = [];
 
       for (const tweet of fetchedTweets) {
         const existing = db
@@ -636,7 +960,7 @@ sourcesRoutes.post('/:id/sync', async (c) => {
 
         if (existing) continue;
 
-        const newArticle: schema.NewArticle = {
+        tweetsToInsert.push({
           id: uuidv4(),
           sourceId: source.id,
           title: tweet.title,
@@ -653,13 +977,78 @@ sourcesRoutes.post('/:id/sync', async (c) => {
           likeCount: tweet.likeCount ?? null,
           readCount: tweet.readCount ?? null,
           commentCount: tweet.commentCount ?? null,
-        };
+        });
+      }
 
-        db.insert(articles).values(newArticle).run();
-        newCount++;
+      if (tweetsToInsert.length > 0) {
+        db.transaction(() => {
+          for (const item of tweetsToInsert) {
+            db.insert(articles).values(item).run();
+          }
+        });
+        newCount += tweetsToInsert.length;
       }
     } catch (err) {
       console.error(`Error syncing Twitter source ${source.name}:`, err);
+      throw err;
+    }
+  } else if (source.type === 'podcast') {
+    try {
+      const podcast = new PodcastSource();
+      const fetchedEpisodes = await podcast.fetchArticles(source.identifier);
+      totalFetched = fetchedEpisodes.length;
+      const episodesToInsert: schema.NewArticle[] = [];
+
+      for (const episode of fetchedEpisodes) {
+        const existing = db
+          .select({ id: articles.id, originalUrl: articles.originalUrl })
+          .from(articles)
+          .where(
+            episode.audioUrl
+              ? or(eq(articles.originalUrl, episode.url), eq(articles.audioUrl, episode.audioUrl))
+              : eq(articles.originalUrl, episode.url)
+          )
+          .get();
+
+        if (existing) {
+          if (episode.audioUrl && existing.originalUrl === episode.audioUrl && episode.url !== episode.audioUrl) {
+            db.update(articles)
+              .set({ originalUrl: episode.url })
+              .where(eq(articles.id, existing.id))
+              .run();
+          }
+          continue;
+        }
+
+        episodesToInsert.push({
+          id: uuidv4(),
+          sourceId: source.id,
+          title: episode.title,
+          author: episode.author ?? null,
+          summary: episode.digest ?? null,
+          originalUrl: episode.url,
+          coverImageUrl: episode.cover ?? null,
+          publishedAt: episode.ctime,
+          fetchedAt: new Date().toISOString(),
+          isRead: false,
+          isStarred: false,
+          contentText: episode.contentText ?? null,
+          contentHtml: episode.contentHtml ?? null,
+          audioUrl: episode.audioUrl ?? null,
+          duration: episode.duration ?? null,
+        });
+      }
+
+      if (episodesToInsert.length > 0) {
+        db.transaction(() => {
+          for (const item of episodesToInsert) {
+            db.insert(articles).values(item).run();
+          }
+        });
+        newCount += episodesToInsert.length;
+      }
+    } catch (err) {
+      console.error(`Error syncing Podcast source ${source.name}:`, err);
       throw err;
     }
   }
@@ -679,3 +1068,102 @@ sourcesRoutes.post('/:id/sync', async (c) => {
     message: `Synced ${newCount} new articles out of ${totalFetched} fetched`,
   });
 });
+
+// ============================================================
+// POST /bulk-update-tags — bulk update tags for sources
+// ============================================================
+sourcesRoutes.post('/bulk-update-tags', async (c) => {
+  const body = await c.req.json<{ ids: string[]; tags: string[]; action: 'append' | 'overwrite' }>();
+  const { ids, tags, action } = body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return c.json<ApiResponse>(
+      { success: false, error: 'Parameter "ids" must be a non-empty array' },
+      400
+    );
+  }
+
+  if (!Array.isArray(tags)) {
+    return c.json<ApiResponse>(
+      { success: false, error: 'Parameter "tags" must be an array' },
+      400
+    );
+  }
+
+  if (action !== 'append' && action !== 'overwrite') {
+    return c.json<ApiResponse>(
+      { success: false, error: 'Parameter "action" must be either "append" or "overwrite"' },
+      400
+    );
+  }
+
+  const db = getDatabase();
+
+  try {
+    db.transaction(() => {
+      for (const id of ids) {
+        const source = db.select().from(sources).where(eq(sources.id, id)).get();
+        if (!source) continue;
+
+        let newTags: string[] = [];
+        if (action === 'overwrite') {
+          newTags = tags;
+        } else {
+          // append
+          const existingTags = source.tags || [];
+          newTags = Array.from(new Set([...existingTags, ...tags]));
+        }
+
+        db.update(sources)
+          .set({
+            tags: newTags,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(sources.id, id))
+          .run();
+      }
+    });
+
+    return c.json<ApiResponse>({
+      success: true,
+      message: 'Tags updated successfully for selected sources',
+    });
+  } catch (err) {
+    return c.json<ApiResponse>(
+      { success: false, error: err instanceof Error ? err.message : String(err) },
+      500
+    );
+  }
+});
+
+// ============================================================
+// POST /bulk-delete — bulk delete sources
+// ============================================================
+sourcesRoutes.post('/bulk-delete', async (c) => {
+  const body = await c.req.json<{ ids: string[] }>();
+  const { ids } = body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return c.json<ApiResponse>(
+      { success: false, error: 'Parameter "ids" must be a non-empty array' },
+      400
+    );
+  }
+
+  const db = getDatabase();
+
+  try {
+    db.delete(sources).where(inArray(sources.id, ids)).run();
+
+    return c.json<ApiResponse>({
+      success: true,
+      message: 'Sources deleted successfully',
+    });
+  } catch (err) {
+    return c.json<ApiResponse>(
+      { success: false, error: err instanceof Error ? err.message : String(err) },
+      500
+    );
+  }
+});
+

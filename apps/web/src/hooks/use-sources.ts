@@ -28,6 +28,21 @@ export function useCreateSource() {
   });
 }
 
+export function useBulkImportSources() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      type: string;
+      identifiers?: string[];
+      sources?: Array<{ name: string; identifier: string; description?: string; avatarUrl?: string }>;
+    }) => sourcesApi.bulkImport(params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] });
+    },
+  });
+}
+
+
 export function useDeleteSource() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -54,10 +69,15 @@ export function useSyncAllSources() {
   const setSyncProgress = useAppStore((s) => s.setSyncProgress);
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (targetSourceIds?: string[]) => {
       // 1. Get all sources
       const allSources = await sourcesApi.list();
-      const activeSources = allSources.filter((s) => s.isActive);
+      let activeSources = allSources.filter((s) => s.isActive);
+
+      if (targetSourceIds && targetSourceIds.length > 0) {
+        activeSources = activeSources.filter((s) => targetSourceIds.includes(s.id));
+      }
+
       const total = activeSources.length;
 
       if (total === 0) {
@@ -122,20 +142,29 @@ export function useSyncAllSources() {
   });
 }
 
-export function useSearchWechat(query: string) {
+export function useSearchWechat(query: string, enabled = true) {
   return useQuery({
     queryKey: ['wechat-search', query],
     queryFn: () => sourcesApi.searchWechat(query),
-    enabled: query.trim().length >= 2,
+    enabled: enabled && query.trim().length >= 2,
     staleTime: 5 * 60 * 1000, // 5 mins
   });
 }
 
-export function useSearchTwitter(query: string) {
+export function useSearchTwitter(query: string, enabled = true) {
   return useQuery({
     queryKey: ['twitter-search', query],
     queryFn: () => sourcesApi.searchTwitter(query),
-    enabled: query.trim().length >= 2,
+    enabled: enabled && query.trim().length >= 2,
+    staleTime: 5 * 60 * 1000, // 5 mins
+  });
+}
+
+export function useSearchPodcast(query: string, enabled = true) {
+  return useQuery({
+    queryKey: ['podcast-search', query],
+    queryFn: () => sourcesApi.searchPodcast(query),
+    enabled: enabled && query.trim().length >= 2,
     staleTime: 5 * 60 * 1000, // 5 mins
   });
 }
@@ -159,3 +188,27 @@ export function useUpdateSource() {
     },
   });
 }
+
+export function useBulkUpdateTags() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { ids: string[]; tags: string[]; action: 'append' | 'overwrite' }) =>
+      sourcesApi.bulkUpdateTags(params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+    },
+  });
+}
+
+export function useBulkDeleteSources() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => sourcesApi.bulkDelete(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sources'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+    },
+  });
+}
+

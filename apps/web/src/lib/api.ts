@@ -11,6 +11,11 @@ import type {
   WechatAccountSearchResult,
   Settings,
   DajialaBalanceInfo,
+  MoonshotBalanceInfo,
+  DeepSeekBalanceInfo,
+  TavilyUsageInfo,
+  OpenRouterBalanceInfo,
+  DashScopeBalanceInfo,
 } from '@knowflow/shared';
 
 const BASE_URL = '/api';
@@ -80,8 +85,29 @@ export const sourcesApi = {
     request<WechatAccountSearchResult[]>(`/sources/wechat/search?q=${encodeURIComponent(query)}`),
   searchTwitter: (query: string) =>
     request<WechatAccountSearchResult[]>(`/sources/twitter/search?q=${encodeURIComponent(query)}`),
+  searchPodcast: (query: string) =>
+    request<any[]>(`/sources/podcast/search?q=${encodeURIComponent(query)}`),
   parseWechatBiz: (url: string) =>
-    request<{ biz: string }>(`/sources/wechat/parse-biz?url=${encodeURIComponent(url)}`),
+    request<{ biz: string; name?: string; avatarUrl?: string }>(`/sources/wechat/parse-biz?url=${encodeURIComponent(url)}`),
+  bulkImport: (params: {
+    type: string;
+    identifiers?: string[];
+    sources?: Array<{ name: string; identifier: string; description?: string; avatarUrl?: string }>;
+  }) =>
+    request<Array<{ identifier: string; success: boolean; error?: string }>>('/sources/bulk-import', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+  bulkUpdateTags: (params: { ids: string[]; tags: string[]; action: 'append' | 'overwrite' }) =>
+    request<void>('/sources/bulk-update-tags', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+  bulkDelete: (ids: string[]) =>
+    request<void>('/sources/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
 };
 
 // ── Articles ──
@@ -103,6 +129,19 @@ export const articlesApi = {
     request<ArticleInfo>(`/articles/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
+    }),
+  transcribe: (id: string) =>
+    request<{ transcriptText: string; transcriptHtml: string }>(`/articles/${id}/transcribe`, {
+      method: 'POST',
+    }),
+  identifySpeakers: (id: string) =>
+    request<{ mapping: Record<string, string>; speakers: string[] }>(`/articles/${id}/identify-speakers`, {
+      method: 'POST',
+    }),
+  applySpeakerMapping: (id: string, mapping: Record<string, string>) =>
+    request<{ replacedCount: number }>(`/articles/${id}/apply-speaker-mapping`, {
+      method: 'POST',
+      body: JSON.stringify({ mapping }),
     }),
 };
 
@@ -154,6 +193,20 @@ export const settingsApi = {
     }),
   getDajialaBalance: () =>
     request<DajialaBalanceInfo>('/settings/dajiala/balance'),
+  getTwitterBalance: () =>
+    request<{ recharge_credits: number }>('/settings/twitter/balance'),
+  getMoonshotBalance: () =>
+    request<MoonshotBalanceInfo>('/settings/moonshot/balance'),
+  getDeepSeekBalance: () =>
+    request<DeepSeekBalanceInfo>('/settings/deepseek/balance'),
+  getTavilyBalance: () =>
+    request<TavilyUsageInfo>('/settings/tavily/balance'),
+  getOpenRouterBalance: () =>
+    request<OpenRouterBalanceInfo>('/settings/openrouter/balance'),
+  getDashScopeBalance: () =>
+    request<DashScopeBalanceInfo>('/settings/dashscope/balance'),
+  getOpenRouterModels: () =>
+    request<any[]>('/settings/openrouter/models'),
 };
 
 export { ApiError };

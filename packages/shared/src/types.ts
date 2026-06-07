@@ -29,6 +29,7 @@ export interface SourceInfo {
   isActive: boolean;
   lastSyncAt?: string;
   articleCount?: number;
+  tags?: string[];
   createdAt: string;
 }
 
@@ -50,6 +51,10 @@ export interface ArticleInfo {
   readCount?: number;
   likeCount?: number;
   commentCount?: number;
+  audioUrl?: string;
+  duration?: number;
+  transcriptText?: string;
+  transcriptHtml?: string;
   isRead: boolean;
   isStarred: boolean;
   publishedAt?: string;
@@ -111,5 +116,49 @@ export interface DajialaBalanceInfo {
   yesterday_money: number;
   request_time: string;
 }
+
+export interface MoonshotBalanceInfo {
+  available_balance: number;
+  voucher_balance: number;
+  cash_balance: number;
+}
+
+export interface DeepSeekBalanceInfo {
+  is_available: boolean;
+  balance_infos: Array<{
+    currency: string;
+    total_balance: string;
+    granted_balance: string;
+    topped_up_balance: string;
+  }>;
+}
+
+export interface TavilyUsageInfo {
+  account: {
+    plan: string;
+    total_limit: number;
+    used: number;
+  };
+}
+
+export interface OpenRouterBalanceInfo {
+  label: string;
+  usage: number;
+  limit: number | null;
+  is_free_tier: boolean;
+  request_count: number;
+  limit_remaining: number | null;
+  limit_reset: string;
+  total_credits?: number | null;
+  total_usage?: number | null;
+}
+
+export interface DashScopeBalanceInfo {
+  billingType: string;
+  balance: string;
+  tips: string;
+  consoleUrl: string;
+}
+
 
 

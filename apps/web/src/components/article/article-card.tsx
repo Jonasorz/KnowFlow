@@ -1,9 +1,10 @@
 import { cn, formatRelativeDate } from '@/lib/utils';
-import { Star, Eye } from 'lucide-react';
+import { Star, Eye, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { ArticleInfo } from '@knowflow/shared';
 import { useNavigate } from '@tanstack/react-router';
 import { useToggleStar, useMarkAsRead } from '@/hooks/use-articles';
+import { useMutationState } from '@tanstack/react-query';
 
 interface ArticleCardProps {
   article: ArticleInfo;
@@ -48,6 +49,13 @@ export function ArticleCard({ article, view }: ArticleCardProps) {
   const toggleStar = useToggleStar();
   const markAsRead = useMarkAsRead();
 
+  // Track pending transcriptions globally to show transcribing indicator
+  const pendingTranscriptions = useMutationState({
+    filters: { mutationKey: ['transcribe-article'], status: 'pending' },
+    select: (mutation) => mutation.state.variables as string,
+  });
+  const isTranscribing = pendingTranscriptions.includes(article.id);
+
   const handleClick = () => {
     markAsRead(article.id);
     navigate({ to: '/article/$id', params: { id: article.id } });
@@ -76,6 +84,13 @@ export function ArticleCard({ article, view }: ArticleCardProps) {
           {!article.isRead && (
             <div className="absolute left-3 top-3">
               <div className="h-2 w-2 rounded-full bg-primary shadow-sm" />
+            </div>
+          )}
+          {/* Transcribing indicator overlay */}
+          {isTranscribing && (
+            <div className="absolute right-3 top-3 bg-amber-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md animate-pulse select-none">
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              <span>转写中</span>
             </div>
           )}
         </div>
@@ -154,6 +169,12 @@ export function ArticleCard({ article, view }: ArticleCardProps) {
           <span className="font-medium text-foreground/70">{article.sourceName || 'Unknown'}</span>
           <span>·</span>
           <span>{article.publishedAt ? formatRelativeDate(article.publishedAt) : ''}</span>
+          {isTranscribing && (
+            <span className="ml-auto text-amber-500 font-medium flex items-center gap-1 text-[11px] animate-pulse select-none">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              转写中
+            </span>
+          )}
         </div>
         <h3 className={cn(
           'line-clamp-1 font-medium tracking-tight text-card-foreground',

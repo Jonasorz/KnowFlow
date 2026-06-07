@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useSettings, useUpdateSettings, useTestApiKey, useDajialaBalance } from '@/hooks/use-settings';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from '@tanstack/react-router';
+import { useSettings, useUpdateSettings, useTestApiKey, useDajialaBalance, useTwitterBalance, useMoonshotBalance, useDeepSeekBalance, useTavilyBalance, useOpenRouterBalance, useDashScopeBalance, useOpenRouterModels } from '@/hooks/use-settings';
 import { useAppStore } from '@/stores/app-store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,8 @@ import {
   Info,
   Coins,
   RefreshCw,
+  Headphones,
+  ArrowLeft,
 } from 'lucide-react';
 import type { AIModel, Settings } from '@knowflow/shared';
 
@@ -111,13 +114,18 @@ function ApiKeyField({ label, provider, value, onChange, onSave, saving, childre
 }
 
 function DajialaBalanceQuery() {
-  const { data, refetch, isFetching, error } = useDajialaBalance();
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const cachedData = useAppStore((s) => s.balances.dajiala);
+  const lastUpdatedStr = useAppStore((s) => s.balancesLastUpdated.dajiala);
+  const setBalance = useAppStore((s) => s.setBalance);
+
+  const { data: qData, refetch, isFetching, error } = useDajialaBalance(cachedData || undefined);
+  const data = qData || cachedData;
+  const lastUpdated = lastUpdatedStr ? new Date(lastUpdatedStr) : null;
 
   const handleQuery = async () => {
     const result = await refetch();
-    if (result.isSuccess) {
-      setLastUpdated(new Date());
+    if (result.isSuccess && result.data) {
+      setBalance('dajiala', result.data);
     }
   };
 
@@ -193,27 +201,610 @@ function DajialaBalanceQuery() {
   );
 }
 
+function TwitterBalanceQuery() {
+  const cachedData = useAppStore((s) => s.balances.twitter);
+  const lastUpdatedStr = useAppStore((s) => s.balancesLastUpdated.twitter);
+  const setBalance = useAppStore((s) => s.setBalance);
+
+  const { data: qData, refetch, isFetching, error } = useTwitterBalance(cachedData || undefined);
+  const data = qData || cachedData;
+  const lastUpdated = lastUpdatedStr ? new Date(lastUpdatedStr) : null;
+
+  const handleQuery = async () => {
+    const result = await refetch();
+    if (result.isSuccess && result.data) {
+      setBalance('twitter', result.data);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3.5 flex flex-col gap-2.5 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <Coins className="h-3.5 w-3.5 text-primary" />
+          X (Twitter) API 账户余额
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleQuery}
+          disabled={isFetching}
+          className="h-6 w-6 rounded-md hover:bg-muted"
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', isFetching && 'animate-spin')} />
+        </Button>
+      </div>
+
+      {isFetching && !data && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse py-1">
+          <Loader2 className="h-3 w-3 animate-spin text-primary animate-spin-slow" />
+          正在查询账户余额...
+        </div>
+      )}
+
+      {error && (
+        <div className="text-xs text-destructive bg-destructive/5 border border-destructive/10 rounded-md p-2">
+          查询失败: {error instanceof Error ? error.message : '未知错误'}
+        </div>
+      )}
+
+      {data && (
+        <div className="grid grid-cols-2 gap-4 py-1.5">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">剩余额度 (Credits)</span>
+            <span className="text-lg font-bold font-mono text-primary mt-0.5">
+              {data.recharge_credits}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {lastUpdated && (
+        <div className="text-[10px] text-muted-foreground/60 text-right mt-1 font-mono">
+          最后更新时间: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
+
+      {!data && !isFetching && !error && (
+        <div className="flex items-center justify-between py-1">
+          <span className="text-xs text-muted-foreground">尚未查询余额</span>
+          <Button variant="outline" size="sm" onClick={handleQuery} className="text-[11px] h-7 px-2.5">
+            立即查询
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MoonshotBalanceQuery() {
+  const cachedData = useAppStore((s) => s.balances.moonshot);
+  const lastUpdatedStr = useAppStore((s) => s.balancesLastUpdated.moonshot);
+  const setBalance = useAppStore((s) => s.setBalance);
+
+  const { data: qData, refetch, isFetching, error } = useMoonshotBalance(cachedData || undefined);
+  const data = qData || cachedData;
+  const lastUpdated = lastUpdatedStr ? new Date(lastUpdatedStr) : null;
+
+  const handleQuery = async () => {
+    const result = await refetch();
+    if (result.isSuccess && result.data) {
+      setBalance('moonshot', result.data);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3.5 flex flex-col gap-2.5 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <Coins className="h-3.5 w-3.5 text-primary" />
+          Moonshot (Kimi) 账户余额
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleQuery}
+          disabled={isFetching}
+          className="h-6 w-6 rounded-md hover:bg-muted"
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', isFetching && 'animate-spin')} />
+        </Button>
+      </div>
+
+      {isFetching && !data && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse py-1">
+          <Loader2 className="h-3 w-3 animate-spin text-primary animate-spin-slow" />
+          正在查询账户余额...
+        </div>
+      )}
+
+      {error && (
+        <div className="text-xs text-destructive bg-destructive/5 border border-destructive/10 rounded-md p-2">
+          查询失败: {error instanceof Error ? error.message : '未知错误'}
+        </div>
+      )}
+
+      {data && (
+        <div className="grid grid-cols-3 gap-2 py-1.5">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">可用余额</span>
+            <span className="text-sm font-bold font-mono text-primary mt-0.5">
+              ¥ {data.available_balance.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">现金余额</span>
+            <span className="text-sm font-bold font-mono text-foreground/85 mt-0.5">
+              ¥ {data.cash_balance.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">赠送余额</span>
+            <span className="text-sm font-bold font-mono text-foreground/85 mt-0.5">
+              ¥ {data.voucher_balance.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {lastUpdated && (
+        <div className="text-[10px] text-muted-foreground/60 text-right mt-1 font-mono">
+          最后更新时间: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
+
+      {!data && !isFetching && !error && (
+        <div className="flex items-center justify-between py-1">
+          <span className="text-xs text-muted-foreground">尚未查询余额</span>
+          <Button variant="outline" size="sm" onClick={handleQuery} className="text-[11px] h-7 px-2.5">
+            立即查询
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DeepSeekBalanceQuery() {
+  const cachedData = useAppStore((s) => s.balances.deepseek);
+  const lastUpdatedStr = useAppStore((s) => s.balancesLastUpdated.deepseek);
+  const setBalance = useAppStore((s) => s.setBalance);
+
+  const { data: qData, refetch, isFetching, error } = useDeepSeekBalance(cachedData || undefined);
+  const data = qData || cachedData;
+  const lastUpdated = lastUpdatedStr ? new Date(lastUpdatedStr) : null;
+
+  const handleQuery = async () => {
+    const result = await refetch();
+    if (result.isSuccess && result.data) {
+      setBalance('deepseek', result.data);
+    }
+  };
+
+  const balanceInfo = data?.balance_infos?.[0];
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3.5 flex flex-col gap-2.5 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <Coins className="h-3.5 w-3.5 text-primary" />
+          DeepSeek 账户余额
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleQuery}
+          disabled={isFetching}
+          className="h-6 w-6 rounded-md hover:bg-muted"
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', isFetching && 'animate-spin')} />
+        </Button>
+      </div>
+
+      {isFetching && !data && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse py-1">
+          <Loader2 className="h-3 w-3 animate-spin text-primary animate-spin-slow" />
+          正在查询账户余额...
+        </div>
+      )}
+
+      {error && (
+        <div className="text-xs text-destructive bg-destructive/5 border border-destructive/10 rounded-md p-2">
+          查询失败: {error instanceof Error ? error.message : '未知错误'}
+        </div>
+      )}
+
+      {data && balanceInfo && (
+        <div className="grid grid-cols-3 gap-2 py-1.5">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">总余额</span>
+            <span className="text-sm font-bold font-mono text-primary mt-0.5">
+              {balanceInfo.currency === 'CNY' ? '¥' : '$'} {parseFloat(balanceInfo.total_balance).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">充值余额</span>
+            <span className="text-sm font-bold font-mono text-foreground/85 mt-0.5">
+              {balanceInfo.currency === 'CNY' ? '¥' : '$'} {parseFloat(balanceInfo.topped_up_balance).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">赠送余额</span>
+            <span className="text-sm font-bold font-mono text-foreground/85 mt-0.5">
+              {balanceInfo.currency === 'CNY' ? '¥' : '$'} {parseFloat(balanceInfo.granted_balance).toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {lastUpdated && (
+        <div className="text-[10px] text-muted-foreground/60 text-right mt-1 font-mono">
+          最后更新时间: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
+
+      {!data && !isFetching && !error && (
+        <div className="flex items-center justify-between py-1">
+          <span className="text-xs text-muted-foreground">尚未查询余额</span>
+          <Button variant="outline" size="sm" onClick={handleQuery} className="text-[11px] h-7 px-2.5">
+            立即查询
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TavilyBalanceQuery() {
+  const cachedData = useAppStore((s) => s.balances.tavily);
+  const lastUpdatedStr = useAppStore((s) => s.balancesLastUpdated.tavily);
+  const setBalance = useAppStore((s) => s.setBalance);
+
+  const { data: qData, refetch, isFetching, error } = useTavilyBalance(cachedData || undefined);
+  const data = qData || cachedData;
+  const lastUpdated = lastUpdatedStr ? new Date(lastUpdatedStr) : null;
+
+  const handleQuery = async () => {
+    const result = await refetch();
+    if (result.isSuccess && result.data) {
+      setBalance('tavily', result.data);
+    }
+  };
+
+  const accountInfo = data?.account;
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3.5 flex flex-col gap-2.5 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <Coins className="h-3.5 w-3.5 text-primary" />
+          Tavily API 调用额度 (Usage)
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleQuery}
+          disabled={isFetching}
+          className="h-6 w-6 rounded-md hover:bg-muted"
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', isFetching && 'animate-spin')} />
+        </Button>
+      </div>
+
+      {isFetching && !data && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse py-1">
+          <Loader2 className="h-3 w-3 animate-spin text-primary animate-spin-slow" />
+          正在查询 API 额度...
+        </div>
+      )}
+
+      {error && (
+        <div className="text-xs text-destructive bg-destructive/5 border border-destructive/10 rounded-md p-2">
+          查询失败: {error instanceof Error ? error.message : '未知错误'}
+        </div>
+      )}
+
+      {data && accountInfo && (
+        <div className="grid grid-cols-3 gap-2 py-1.5">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">已使用 (Used)</span>
+            <span className="text-sm font-bold font-mono text-primary mt-0.5">
+              {accountInfo.used} / {accountInfo.total_limit}
+            </span>
+          </div>
+          <div className="flex flex-col col-span-2">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">当前套餐类型</span>
+            <span className="text-sm font-bold text-foreground/85 mt-0.5 uppercase tracking-wide">
+              {accountInfo.plan || 'Free'} Plan
+            </span>
+          </div>
+        </div>
+      )}
+
+      {lastUpdated && (
+        <div className="text-[10px] text-muted-foreground/60 text-right mt-1 font-mono">
+          最后更新时间: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
+
+      {!data && !isFetching && !error && (
+        <div className="flex items-center justify-between py-1">
+          <span className="text-xs text-muted-foreground">尚未查询额度</span>
+          <Button variant="outline" size="sm" onClick={handleQuery} className="text-[11px] h-7 px-2.5">
+            立即查询
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OpenRouterBalanceQuery() {
+  const cachedData = useAppStore((s) => s.balances.openrouter);
+  const lastUpdatedStr = useAppStore((s) => s.balancesLastUpdated.openrouter);
+  const setBalance = useAppStore((s) => s.setBalance);
+
+  const { data: qData, refetch, isFetching, error } = useOpenRouterBalance(cachedData || undefined);
+  const data = qData || cachedData;
+  const lastUpdated = lastUpdatedStr ? new Date(lastUpdatedStr) : null;
+
+  const handleQuery = async () => {
+    const result = await refetch();
+    if (result.isSuccess && result.data) {
+      setBalance('openrouter', result.data);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3.5 flex flex-col gap-2.5 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <Coins className="h-3.5 w-3.5 text-primary" />
+          OpenRouter 账户限额 & 消费
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleQuery}
+          disabled={isFetching}
+          className="h-6 w-6 rounded-md hover:bg-muted"
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', isFetching && 'animate-spin')} />
+        </Button>
+      </div>
+
+      {isFetching && !data && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse py-1">
+          <Loader2 className="h-3 w-3 animate-spin text-primary animate-spin-slow" />
+          正在查询 API 账户信息...
+        </div>
+      )}
+
+      {error && (
+        <div className="text-xs text-destructive bg-destructive/5 border border-destructive/10 rounded-md p-2">
+          查询失败: {error instanceof Error ? error.message : '未知错误'}
+        </div>
+      )}
+
+      {data && (() => {
+        const accountBalance = (data.total_credits !== null && data.total_credits !== undefined && data.total_usage !== null && data.total_usage !== undefined)
+          ? Math.max(0, data.total_credits - data.total_usage)
+          : null;
+
+        const keyRemaining = (data.limit !== null && data.limit !== undefined)
+          ? Math.max(0, data.limit - data.usage)
+          : null;
+
+        return (
+          <div className="grid grid-cols-2 gap-4 py-1.5 animate-fade-in">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">密钥名称 (Label)</span>
+              <span className="text-xs font-bold text-foreground mt-1">
+                {data.label || '默认密钥'}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">账户余额 (Account Balance)</span>
+              <span className="text-sm font-bold font-mono text-emerald-500 mt-0.5">
+                {accountBalance !== null ? `$ ${accountBalance.toFixed(4)}` : '仅管理密钥可用'}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">密钥已消费 (Key Usage)</span>
+              <span className="text-sm font-bold font-mono text-primary mt-0.5">
+                $ {data.usage?.toFixed(4) || '0.0000'}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">密钥最高限额 (Key Limit)</span>
+              <span className="text-sm font-bold font-mono text-foreground/80 mt-0.5">
+                {data.limit ? `$ ${data.limit.toFixed(2)}` : '无限制'}
+              </span>
+            </div>
+            {keyRemaining !== null && (
+              <div className="flex flex-col col-span-2 border-t border-border/50 pt-2 mt-1">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">密钥剩余额度 (Key Balance)</span>
+                <span className="text-sm font-bold font-mono text-emerald-500 mt-0.5">
+                  $ {keyRemaining.toFixed(4)}
+                </span>
+              </div>
+            )}
+            {data.is_free_tier && (
+              <div className="col-span-2 mt-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-green-500/10 text-green-500 border border-green-500/20">
+                  免费层级 (Free Tier)
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {lastUpdated && (
+        <div className="text-[10px] text-muted-foreground/60 text-right mt-1 font-mono">
+          最后更新时间: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
+
+      {!data && !isFetching && !error && (
+        <div className="flex items-center justify-between py-1">
+          <span className="text-xs text-muted-foreground">尚未查询账户额度</span>
+          <Button variant="outline" size="sm" onClick={handleQuery} className="text-[11px] h-7 px-2.5">
+            立即查询
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DashScopeBalanceQuery() {
+  const cachedData = useAppStore((s) => s.balances.dashscope);
+  const lastUpdatedStr = useAppStore((s) => s.balancesLastUpdated.dashscope);
+  const setBalance = useAppStore((s) => s.setBalance);
+
+  const { data: qData, refetch, isFetching, error } = useDashScopeBalance(cachedData || undefined);
+  const data = qData || cachedData;
+  const lastUpdated = lastUpdatedStr ? new Date(lastUpdatedStr) : null;
+
+  const handleQuery = async () => {
+    const result = await refetch();
+    if (result.isSuccess && result.data) {
+      setBalance('dashscope', result.data);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3.5 flex flex-col gap-2.5 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <Coins className="h-3.5 w-3.5 text-primary" />
+          通义听悟 (DashScope) 余额信息
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleQuery}
+          disabled={isFetching}
+          className="h-6 w-6 rounded-md hover:bg-muted"
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', isFetching && 'animate-spin')} />
+        </Button>
+      </div>
+
+      {isFetching && !data && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse py-1">
+          <Loader2 className="h-3 w-3 animate-spin text-primary animate-spin-slow" />
+          正在获取余额信息...
+        </div>
+      )}
+
+      {error && (
+        <div className="text-xs text-destructive bg-destructive/5 border border-destructive/10 rounded-md p-2">
+          获取失败: {error instanceof Error ? error.message : '未知错误'}
+        </div>
+      )}
+
+      {data && (
+        <div className="flex flex-col gap-2 py-1 select-none">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">计费模式</span>
+              <span className="text-xs font-bold text-foreground/80 mt-0.5">
+                {data.billingType}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">额度余额</span>
+              <span className="text-xs font-bold text-emerald-500 mt-0.5">
+                {data.balance}
+              </span>
+            </div>
+          </div>
+          <div className="text-[11px] text-muted-foreground bg-muted/50 rounded-lg p-2 mt-1 leading-normal border border-border/50">
+            {data.tips}{' '}
+            <a
+              href={data.consoleUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:underline font-semibold"
+            >
+              打开控制台 ↗
+            </a>
+          </div>
+        </div>
+      )}
+
+      {lastUpdated && (
+        <div className="text-[10px] text-muted-foreground/60 text-right mt-1 font-mono">
+          最后更新时间: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
+
+      {!data && !isFetching && !error && (
+        <div className="flex items-center justify-between py-1">
+          <span className="text-xs text-muted-foreground">尚未获取余额信息</span>
+          <Button variant="outline" size="sm" onClick={handleQuery} className="text-[11px] h-7 px-2.5">
+            获取信息
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const aiModels: { value: AIModel; label: string }[] = [
   { value: 'deepseek-chat', label: 'DeepSeek Chat' },
   { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner' },
-  { value: 'gpt-4o', label: 'GPT-4o' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-  { value: 'claude-sonnet', label: 'Claude Sonnet' },
-  { value: 'claude-haiku', label: 'Claude Haiku' },
+  { value: 'kimi-k2.6', label: 'Kimi (K2.6)' },
+  { value: 'kimi-8k', label: 'Kimi (8k)' },
+  { value: 'kimi-32k', label: 'Kimi (32k)' },
 ];
 
 export function SettingsPage() {
+  const router = useRouter();
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
   const { theme, setTheme } = useAppStore();
+  const { data: openRouterModels } = useOpenRouterModels();
+  const [modelSearch, setModelSearch] = useState('');
 
   const [formState, setFormState] = useState<Partial<Settings>>({});
+  const [activeTab, setActiveTab] = useState<'subscriptions' | 'llm' | 'prompts-general' | 'prompts-podcast' | 'general'>('subscriptions');
 
   useEffect(() => {
     if (settings) {
       setFormState(settings);
     }
   }, [settings]);
+
+  const settingsTabs = [
+    { id: 'subscriptions' as const, label: '订阅源 API', icon: <Rss className="h-4 w-4" /> },
+    { id: 'llm' as const, label: 'AI LLM API', icon: <Key className="h-4 w-4" /> },
+    { id: 'prompts-general' as const, label: '通用总结提示词', icon: <Sparkles className="h-4 w-4" /> },
+    { id: 'prompts-podcast' as const, label: '播客总结提示词', icon: <Headphones className="h-4 w-4" /> },
+    { id: 'general' as const, label: '常规设置', icon: <Monitor className="h-4 w-4" /> },
+  ];
+
+  const allModels = useMemo(() => {
+    const list = [...aiModels];
+    if (openRouterModels && Array.isArray(openRouterModels)) {
+      openRouterModels.forEach((m: any) => {
+        list.push({
+          value: `openrouter/${m.id}`,
+          label: `OpenRouter: ${m.name || m.id}`,
+        });
+      });
+    }
+    return list;
+  }, [openRouterModels]);
+
+  const filteredModels = useMemo(() => {
+    return allModels.filter((m) =>
+      m.label.toLowerCase().includes(modelSearch.toLowerCase()) ||
+      m.value.toLowerCase().includes(modelSearch.toLowerCase())
+    );
+  }, [allModels, modelSearch]);
 
   const handleSaveKey = (key: keyof Settings) => {
     updateSettings.mutate({ [key]: formState[key] });
@@ -241,216 +832,367 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl p-6 animate-fade-in">
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Settings</h1>
-      <p className="text-sm text-muted-foreground mb-8">
+      <div className="flex items-center gap-3 mb-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => router.history.back()}
+          className="shrink-0 -ml-1 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4.5 w-4.5" />
+        </Button>
+        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+      </div>
+      <p className="text-sm text-muted-foreground mb-6 ml-9">
         Configure your API keys, AI model preferences, and appearance.
       </p>
 
-      {/* API Keys Section */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Key className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-semibold">API Keys</h2>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5 space-y-5">
-          <ApiKeyField
-            label="极致了 (DaJiaLe) API Key"
-            provider="dajiala"
-            value={formState.dajialaApiKey || ''}
-            onChange={(v) => setFormState((s) => ({ ...s, dajialaApiKey: v }))}
-            onSave={() => handleSaveKey('dajialaApiKey')}
-            saving={updateSettings.isPending}
-          >
-            {settings?.dajialaApiKey && (
-              <DajialaBalanceQuery />
-            )}
-          </ApiKeyField>
-          <Separator />
-          <ApiKeyField
-            label="X (Twitter) API Key"
-            provider="twitter"
-            value={formState.twitterApiKey || ''}
-            onChange={(v) => setFormState((s) => ({ ...s, twitterApiKey: v }))}
-            onSave={() => handleSaveKey('twitterApiKey')}
-            saving={updateSettings.isPending}
-          />
-          <Separator />
-          <ApiKeyField
-            label="OpenAI API Key"
-            provider="openai"
-            value={formState.openaiApiKey || ''}
-            onChange={(v) => setFormState((s) => ({ ...s, openaiApiKey: v }))}
-            onSave={() => handleSaveKey('openaiApiKey')}
-            saving={updateSettings.isPending}
-          />
-          <Separator />
-          <ApiKeyField
-            label="Anthropic API Key"
-            provider="anthropic"
-            value={formState.anthropicApiKey || ''}
-            onChange={(v) => setFormState((s) => ({ ...s, anthropicApiKey: v }))}
-            onSave={() => handleSaveKey('anthropicApiKey')}
-            saving={updateSettings.isPending}
-          />
-          <Separator />
-          <ApiKeyField
-            label="DeepSeek API Key"
-            provider="deepseek"
-            value={formState.deepseekApiKey || ''}
-            onChange={(v) => setFormState((s) => ({ ...s, deepseekApiKey: v }))}
-            onSave={() => handleSaveKey('deepseekApiKey')}
-            saving={updateSettings.isPending}
-          />
-          <Separator />
-          <ApiKeyField
-            label="Tavily Search API Key"
-            provider="tavily"
-            value={formState.tavilyApiKey || ''}
-            onChange={(v) => setFormState((s) => ({ ...s, tavilyApiKey: v }))}
-            onSave={() => handleSaveKey('tavilyApiKey')}
-            saving={updateSettings.isPending}
-          />
-        </div>
-      </section>
+      {/* Tab Selector */}
+      <div className="flex border-b border-border mb-6 overflow-x-auto select-none no-scrollbar">
+        {settingsTabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex items-center gap-1.5 px-4 py-2.5 border-b-2 font-medium text-xs transition-colors shrink-0 outline-none cursor-pointer',
+                isActive
+                  ? 'border-primary text-primary font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-      {/* AI Model Section */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-semibold">Default AI Model</h2>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="outline" className="w-full justify-between">
-                {aiModels.find((m) => m.value === (formState.defaultAIModel || 'deepseek-chat'))?.label || 'Select model'}
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-full min-w-[240px]">
-              <DropdownMenuLabel>Select Default Model</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {aiModels.map((model) => (
-                <DropdownMenuItem
-                  key={model.value}
-                  onClick={() => {
-                    setFormState((s) => ({ ...s, defaultAIModel: model.value }));
-                    updateSettings.mutate({ defaultAIModel: model.value });
-                  }}
-                >
-                  <span className="flex-1">{model.label}</span>
-                  {formState.defaultAIModel === model.value && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </section>
-
-      {/* AI Prompt Settings Section */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-semibold">AI Summary Prompt Settings</h2>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5 space-y-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">System Prompt (系统提示词)</label>
-            <textarea
-              value={formState.summarySystemPrompt || ''}
-              onChange={(e) => setFormState((s) => ({ ...s, summarySystemPrompt: e.target.value }))}
-              placeholder="Enter AI system prompt..."
-              className="w-full min-h-[120px] text-xs font-mono p-3 rounded-lg border border-border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-            <div className="flex justify-end mt-1">
-              <Button
-                size="sm"
-                onClick={() => handleSaveKey('summarySystemPrompt')}
-                disabled={updateSettings.isPending}
+      {/* Tab Content */}
+      <div className="space-y-6">
+        {activeTab === 'subscriptions' && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Rss className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold">订阅源 API 密钥</h2>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5 space-y-5">
+              <ApiKeyField
+                label="极致了 (DaJiaLe) API Key"
+                provider="dajiala"
+                value={formState.dajialaApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, dajialaApiKey: v }))}
+                onSave={() => handleSaveKey('dajialaApiKey')}
+                saving={updateSettings.isPending}
               >
-                {updateSettings.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save System Prompt'}
-              </Button>
-            </div>
-          </div>
-          <Separator />
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">User Prompt Template (用户提示词模板)</label>
-              <span className="text-[10px] text-muted-foreground font-mono">Use {'{{content}}'} as placeholder</span>
-            </div>
-            <textarea
-              value={formState.summaryUserPrompt || ''}
-              onChange={(e) => setFormState((s) => ({ ...s, summaryUserPrompt: e.target.value }))}
-              placeholder="Enter user prompt template..."
-              className="w-full min-h-[80px] text-xs font-mono p-3 rounded-lg border border-border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-            <div className="flex justify-end mt-1">
-              <Button
-                size="sm"
-                onClick={() => handleSaveKey('summaryUserPrompt')}
-                disabled={updateSettings.isPending}
-              >
-                {updateSettings.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save User Prompt'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Theme Section */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Sun className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-semibold">Appearance</h2>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex gap-3">
-            {themes.map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                onClick={() => setTheme(value)}
-                className={cn(
-                  'flex flex-1 flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all duration-200',
-                  theme === value
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-border hover:bg-muted/50'
+                {settings?.dajialaApiKey && (
+                  <DajialaBalanceQuery />
                 )}
+              </ApiKeyField>
+              <Separator />
+              <ApiKeyField
+                label="X (Twitter) API Key"
+                provider="twitter"
+                value={formState.twitterApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, twitterApiKey: v }))}
+                onSave={() => handleSaveKey('twitterApiKey')}
+                saving={updateSettings.isPending}
               >
-                <Icon className={cn('h-5 w-5', theme === value ? 'text-primary' : 'text-muted-foreground')} />
-                <span className={cn('text-sm font-medium', theme === value ? 'text-primary' : 'text-muted-foreground')}>
-                  {label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
+                {settings?.twitterApiKey && (
+                  <TwitterBalanceQuery />
+                )}
+              </ApiKeyField>
+            </div>
+          </section>
+        )}
 
-      {/* About Section */}
-      <section className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Info className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-semibold">About</h2>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 shadow-sm">
-              <Rss className="h-5 w-5 text-white" />
+        {activeTab === 'llm' && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Key className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold">AI LLM API 密钥与模型</h2>
             </div>
-            <div>
-              <h3 className="font-semibold">KnowFlow</h3>
-              <p className="text-xs text-muted-foreground">Version 0.1.0</p>
+
+            {/* Default AI Model */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">默认 AI 模型</label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger>
+                    <Button variant="outline" className="w-full justify-between">
+                      {allModels.find((m) => m.value === (formState.defaultAIModel || 'deepseek-chat'))?.label || formState.defaultAIModel || 'Select model'}
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-full min-w-[280px] max-h-[350px] overflow-y-auto">
+                    <DropdownMenuLabel className="pb-1">Select Default Model</DropdownMenuLabel>
+                    <div className="px-2 pb-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        placeholder="搜索模型..."
+                        value={modelSearch}
+                        onChange={(e) => setModelSearch(e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-xs rounded-md border border-border bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                      />
+                    </div>
+                    <DropdownMenuSeparator />
+                    {filteredModels.map((model) => (
+                      <DropdownMenuItem
+                        key={model.value}
+                        onClick={() => {
+                          setFormState((s) => ({ ...s, defaultAIModel: model.value }));
+                          updateSettings.mutate({ defaultAIModel: model.value });
+                        }}
+                      >
+                        <span className="flex-1 text-xs">{model.label}</span>
+                        {formState.defaultAIModel === model.value && (
+                          <Check className="h-4 w-4 text-primary" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                    {filteredModels.length === 0 && (
+                      <div className="text-[11px] text-muted-foreground text-center py-4">
+                        未找到匹配的模型
+                      </div>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Multi-source content aggregation reader with AI-powered insights.
-            Subscribe to WeChat public accounts and more, read with AI summaries,
-            Q&A, and mind maps.
-          </p>
-        </div>
-      </section>
+
+            {/* API Keys */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-5">
+              <ApiKeyField
+                label="DeepSeek API Key"
+                provider="deepseek"
+                value={formState.deepseekApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, deepseekApiKey: v }))}
+                onSave={() => handleSaveKey('deepseekApiKey')}
+                saving={updateSettings.isPending}
+              >
+                {settings?.deepseekApiKey && (
+                  <DeepSeekBalanceQuery />
+                )}
+              </ApiKeyField>
+              <Separator />
+              <ApiKeyField
+                label="Moonshot (Kimi) API Key"
+                provider="moonshot"
+                value={formState.moonshotApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, moonshotApiKey: v }))}
+                onSave={() => handleSaveKey('moonshotApiKey')}
+                saving={updateSettings.isPending}
+              >
+                {settings?.moonshotApiKey && (
+                  <MoonshotBalanceQuery />
+                )}
+              </ApiKeyField>
+              <Separator />
+              <ApiKeyField
+                label="OpenRouter API Key"
+                provider="openrouter"
+                value={formState.openrouterApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, openrouterApiKey: v }))}
+                onSave={() => handleSaveKey('openrouterApiKey')}
+                saving={updateSettings.isPending}
+              >
+                {settings?.openrouterApiKey && (
+                  <OpenRouterBalanceQuery />
+                )}
+              </ApiKeyField>
+              <Separator />
+              <ApiKeyField
+                label="Tavily Search API Key"
+                provider="tavily"
+                value={formState.tavilyApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, tavilyApiKey: v }))}
+                onSave={() => handleSaveKey('tavilyApiKey')}
+                saving={updateSettings.isPending}
+              >
+                {settings?.tavilyApiKey && (
+                  <TavilyBalanceQuery />
+                )}
+              </ApiKeyField>
+              <Separator />
+              <ApiKeyField
+                label="通义听悟 (DashScope) API Key"
+                provider="dashscope"
+                value={formState.dashscopeApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, dashscopeApiKey: v }))}
+                onSave={() => handleSaveKey('dashscopeApiKey')}
+                saving={updateSettings.isPending}
+              >
+                <p className="text-xs text-muted-foreground mt-1 select-none leading-normal">
+                  提示：通义听悟 API 主要用于播客音频的语音转写与发言人角色识别（播客专用模型）。
+                </p>
+                {settings?.dashscopeApiKey && (
+                  <DashScopeBalanceQuery />
+                )}
+              </ApiKeyField>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'prompts-general' && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold">通用总结提示词设置</h2>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5 space-y-5">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">System Prompt (系统提示词)</label>
+                <textarea
+                  value={formState.summarySystemPrompt || ''}
+                  onChange={(e) => setFormState((s) => ({ ...s, summarySystemPrompt: e.target.value }))}
+                  placeholder="Enter AI system prompt..."
+                  className="w-full min-h-[160px] text-xs font-mono p-3 rounded-lg border border-border bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                />
+                <div className="flex justify-end mt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveKey('summarySystemPrompt')}
+                    disabled={updateSettings.isPending}
+                  >
+                    {updateSettings.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save System Prompt'}
+                  </Button>
+                </div>
+              </div>
+              <Separator />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">User Prompt Template (用户提示词模板)</label>
+                  <span className="text-[10px] text-muted-foreground font-mono">Use {'{{content}}'} as placeholder</span>
+                </div>
+                <textarea
+                  value={formState.summaryUserPrompt || ''}
+                  onChange={(e) => setFormState((s) => ({ ...s, summaryUserPrompt: e.target.value }))}
+                  placeholder="Enter user prompt template..."
+                  className="w-full min-h-[100px] text-xs font-mono p-3 rounded-lg border border-border bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                />
+                <div className="flex justify-end mt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveKey('summaryUserPrompt')}
+                    disabled={updateSettings.isPending}
+                  >
+                    {updateSettings.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save User Prompt'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'prompts-podcast' && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Headphones className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold">播客总结提示词设置</h2>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5 space-y-5">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Podcast System Prompt (播客系统提示词)</label>
+                <textarea
+                  value={formState.podcastSummarySystemPrompt || ''}
+                  onChange={(e) => setFormState((s) => ({ ...s, podcastSummarySystemPrompt: e.target.value }))}
+                  placeholder="Enter podcast AI system prompt..."
+                  className="w-full min-h-[220px] text-xs font-mono p-3 rounded-lg border border-border bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                />
+                <div className="flex justify-end mt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveKey('podcastSummarySystemPrompt')}
+                    disabled={updateSettings.isPending}
+                  >
+                    {updateSettings.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save Podcast System Prompt'}
+                  </Button>
+                </div>
+              </div>
+              <Separator />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Podcast User Prompt Template (播客用户提示词模板)</label>
+                  <span className="text-[10px] text-muted-foreground font-mono">Use {'{{content}}'} as placeholder</span>
+                </div>
+                <textarea
+                  value={formState.podcastSummaryUserPrompt || ''}
+                  onChange={(e) => setFormState((s) => ({ ...s, podcastSummaryUserPrompt: e.target.value }))}
+                  placeholder="Enter podcast user prompt template..."
+                  className="w-full min-h-[100px] text-xs font-mono p-3 rounded-lg border border-border bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                />
+                <div className="flex justify-end mt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveKey('podcastSummaryUserPrompt')}
+                    disabled={updateSettings.isPending}
+                  >
+                    {updateSettings.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save Podcast User Prompt'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'general' && (
+          <section className="space-y-6">
+            {/* Theme Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Sun className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold">Appearance</h2>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex gap-3">
+                  {themes.map(({ value, label, icon: Icon }) => (
+                    <button
+                      key={value}
+                      onClick={() => setTheme(value)}
+                      className={cn(
+                        'flex flex-1 flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all duration-200 cursor-pointer',
+                        theme === value
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-border hover:bg-muted/50'
+                      )}
+                    >
+                      <Icon className={cn('h-5 w-5', theme === value ? 'text-primary' : 'text-muted-foreground')} />
+                      <span className={cn('text-sm font-medium', theme === value ? 'text-primary' : 'text-muted-foreground')}>
+                        {label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* About Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Info className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold">About</h2>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 shadow-sm">
+                    <Rss className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">KnowFlow</h3>
+                    <p className="text-xs text-muted-foreground">Version 0.1.0</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Multi-source content aggregation reader with AI-powered insights.
+                  Subscribe to WeChat public accounts and more, read with AI summaries,
+                  Q&A, and mind maps.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

@@ -9,8 +9,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSearchWechat, useSearchTwitter, useCreateSource, useParseWechatBiz } from '@/hooks/use-sources';
-import { Search, Plus, Check, Users, Eye, MessageCircle, HelpCircle, Loader2, Twitter } from 'lucide-react';
+import { useSearchWechat, useSearchTwitter, useSearchPodcast, useCreateSource, useParseWechatBiz, useBulkImportSources } from '@/hooks/use-sources';
+import { Search, Plus, Check, Users, Eye, MessageCircle, HelpCircle, Loader2, Twitter, Upload, FileText, Trash2, Headphones } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { WechatAccountSearchResult } from '@knowflow/shared';
 
@@ -40,9 +40,58 @@ function extractBiz(input: string): string {
   return trimmed;
 }
 
+function parseCSV(text: string): string[][] {
+  const result: string[][] = [];
+  let row: string[] = [];
+  let col = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (next === '"') {
+          col += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        col += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        row.push(col);
+        col = '';
+      } else if (char === '\n' || char === '\r') {
+        row.push(col);
+        col = '';
+        if (row.length > 1 || (row.length === 1 && row[0] !== '')) {
+          result.push(row);
+        }
+        row = [];
+        if (char === '\r' && next === '\n') {
+          i++; // Skip \n
+        }
+      } else {
+        col += char;
+      }
+    }
+  }
+  if (col !== '' || row.length > 0) {
+    row.push(col);
+    result.push(row);
+  }
+  return result;
+}
+
 export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
-  const [platform, setPlatform] = useState<'wechat' | 'twitter'>('wechat');
-  const [activeTab, setActiveTab] = useState<'search' | 'manual'>('search');
+  const [platform, setPlatform] = useState<'wechat' | 'twitter' | 'podcast'>('wechat');
+  const [activeTab, setActiveTab] = useState<'search' | 'manual' | 'bulk'>('search');
   const [query, setQuery] = useState('');
   const [subscribedIds, setSubscribedIds] = useState<Set<string>>(new Set());
   
@@ -61,21 +110,54 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
   const [twManualAvatarUrl, setTwManualAvatarUrl] = useState('');
   const [twManualError, setTwManualError] = useState('');
 
-  const { data: wechatResults, isLoading: wechatLoading, isError: wechatError } = useSearchWechat(query);
-  const { data: twitterResults, isLoading: twitterLoading, isError: twitterError } = useSearchTwitter(query);
+  // Podcast Manual states
+  const [podcastManualName, setPodcastManualName] = useState('');
+  const [podcastManualFeedUrl, setPodcastManualFeedUrl] = useState('');
+  const [podcastManualDescription, setPodcastManualDescription] = useState('');
+  const [podcastManualAvatarUrl, setPodcastManualAvatarUrl] = useState('');
+  const [podcastManualError, setPodcastManualError] = useState('');
+
+  // Twitter Bulk states
+  const [bulkInput, setBulkInput] = useState('');
+  const [bulkImportResults, setBulkImportResults] = useState<Array<{ identifier: string; success: boolean; error?: string }> | null>(null);
+  const [bulkError, setBulkError] = useState('');
+  const [bulkMode, setBulkMode] = useState<'file' | 'text'>('file');
+  const [fileName, setFileName] = useState('');
+  const [parsedSources, setParsedSources] = useState<Array<{ name: string; identifier: string; description?: string; avatarUrl?: string }>>([]);
+
+  const { data: wechatResults, isLoading: wechatLoading, isError: wechatError } = useSearchWechat(query, platform === 'wechat');
+  const { data: twitterResults, isLoading: twitterLoading, isError: twitterError } = useSearchTwitter(query, platform === 'twitter');
+  const { data: podcastResults, isLoading: podcastLoading, isError: podcastError } = useSearchPodcast(query, platform === 'podcast');
   const createSource = useCreateSource();
   const parseWechatBiz = useParseWechatBiz();
+  const bulkImport = useBulkImportSources();
 
-  const results = platform === 'wechat' ? wechatResults : twitterResults;
-  const isLoading = platform === 'wechat' ? wechatLoading : twitterLoading;
-  const isError = platform === 'wechat' ? wechatError : twitterError;
+  const results = platform === 'wechat' ? wechatResults : platform === 'twitter' ? twitterResults : podcastResults;
+  const isLoading = platform === 'wechat' ? wechatLoading : platform === 'twitter' ? twitterLoading : podcastLoading;
+  const isError = platform === 'wechat' ? wechatError : platform === 'twitter' ? twitterError : podcastError;
 
   // Reset search query and errors when platform changes
   useEffect(() => {
     setQuery('');
     setManualError('');
     setTwManualError('');
+    setPodcastManualError('');
+    if (platform === 'wechat') {
+      setActiveTab('manual');
+    } else {
+      setActiveTab('search');
+    }
   }, [platform]);
+
+  // Reset bulk import states when platform, tab, or dialog state changes
+  useEffect(() => {
+    setBulkInput('');
+    setBulkImportResults(null);
+    setBulkError('');
+    setBulkMode('file');
+    setFileName('');
+    setParsedSources([]);
+  }, [platform, activeTab, open]);
 
   // Reset resolved state and errors when input changes
   useEffect(() => {
@@ -101,6 +183,12 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
           const res = await parseWechatBiz.mutateAsync(trimmed);
           if (res && res.biz) {
             setResolvedBizFromBackend(res.biz);
+            if (res.name) {
+              setManualName(res.name);
+            }
+            if (res.avatarUrl) {
+              setManualAvatarUrl(res.avatarUrl);
+            }
           }
         } catch (err) {
           setManualError('无法从该微信链接中提取 Biz ID，请确认链接有效或手动输入 Biz ID。');
@@ -155,6 +243,12 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
       try {
         const res = await parseWechatBiz.mutateAsync(manualBizOrUrl.trim());
         biz = res.biz;
+        if (res.name) {
+          setManualName(res.name);
+        }
+        if (res.avatarUrl) {
+          setManualAvatarUrl(res.avatarUrl);
+        }
       } catch (err) {
         setManualError('无法解析该链接，请确认链接正确，或手动输入该公众号的 Biz ID。');
         return;
@@ -229,6 +323,198 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
     }
   };
 
+  const handlePodcastManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPodcastManualError('');
+
+    if (!podcastManualName.trim()) {
+      setPodcastManualError('订阅源名称不能为空');
+      return;
+    }
+    if (!podcastManualFeedUrl.trim()) {
+      setPodcastManualError('RSS 订阅源地址不能为空');
+      return;
+    }
+
+    try {
+      await createSource.mutateAsync({
+        type: 'podcast',
+        name: podcastManualName.trim(),
+        identifier: podcastManualFeedUrl.trim(),
+        avatarUrl: podcastManualAvatarUrl.trim() || undefined,
+        description: podcastManualDescription.trim() || undefined,
+      });
+
+      // Clear form
+      setPodcastManualName('');
+      setPodcastManualFeedUrl('');
+      setPodcastManualDescription('');
+      setPodcastManualAvatarUrl('');
+      
+      // Close dialog
+      onOpenChange(false);
+    } catch (err) {
+      setPodcastManualError(err instanceof Error ? err.message : '添加播客订阅源失败');
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    setBulkError('');
+    setParsedSources([]);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (!text) {
+          setBulkError('文件内容为空');
+          return;
+        }
+
+        const parsedRows = parseCSV(text);
+        if (parsedRows.length < 2) {
+          setBulkError('CSV 文件格式不正确或没有数据');
+          return;
+        }
+
+        const headers = parsedRows[0].map(h => h.trim().toLowerCase());
+        
+        // Find username column
+        const usernameCandidates = ['username', 'user_name', 'user name', 'handle', 'screen_name', 'screen name', 'identifier'];
+        let usernameIndex = -1;
+        for (const candidate of usernameCandidates) {
+          const idx = headers.indexOf(candidate);
+          if (idx !== -1) {
+            usernameIndex = idx;
+            break;
+          }
+        }
+
+        // Find name column
+        const nameCandidates = ['name', 'display_name', 'display name', 'title'];
+        let nameIndex = -1;
+        for (const candidate of nameCandidates) {
+          const idx = headers.indexOf(candidate);
+          if (idx !== -1) {
+            nameIndex = idx;
+            break;
+          }
+        }
+
+        // Find bio column
+        const bioCandidates = ['bio', 'description', 'about', 'summary', 'profile_bio'];
+        let bioIndex = -1;
+        for (const candidate of bioCandidates) {
+          const idx = headers.indexOf(candidate);
+          if (idx !== -1) {
+            bioIndex = idx;
+            break;
+          }
+        }
+
+        // Find avatar column
+        const avatarCandidates = ['avatar_url', 'avatarurl', 'avatar', 'profile_image_url', 'profile image url', 'profile_picture', 'profile picture'];
+        let avatarIndex = -1;
+        for (const candidate of avatarCandidates) {
+          const idx = headers.indexOf(candidate);
+          if (idx !== -1) {
+            avatarIndex = idx;
+            break;
+          }
+        }
+
+        if (usernameIndex === -1) {
+          setBulkError('CSV 文件缺少 "Username" 或 "user_name" 列（用户名）');
+          return;
+        }
+
+        const sources = parsedRows.slice(1).map(row => {
+          let identifier = row[usernameIndex]?.trim() || '';
+          if (identifier.startsWith('https://x.com/') || identifier.startsWith('https://twitter.com/')) {
+            const parts = identifier.split('/');
+            identifier = parts[parts.length - 1];
+          }
+          if (identifier.startsWith('@')) {
+            identifier = identifier.substring(1);
+          }
+          // Remove potential query parameters or quotes
+          identifier = identifier.split('?')[0].replace(/['"]/g, '').trim();
+
+          const name = nameIndex !== -1 ? row[nameIndex]?.trim() || identifier : identifier;
+          const description = bioIndex !== -1 ? row[bioIndex]?.trim() || '' : '';
+          const avatarUrl = avatarIndex !== -1 ? row[avatarIndex]?.trim() || '' : '';
+
+          return { identifier, name, description, avatarUrl };
+        }).filter(s => s.identifier.length > 0);
+
+        if (sources.length === 0) {
+          setBulkError('未解析到任何有效的 Twitter 用户名');
+          return;
+        }
+
+        setParsedSources(sources);
+      } catch (err) {
+        setBulkError('解析 CSV 文件失败：' + (err instanceof Error ? err.message : String(err)));
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleTwitterBulkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBulkError('');
+    setBulkImportResults(null);
+
+    if (bulkMode === 'file') {
+      if (parsedSources.length === 0) {
+        setBulkError('请先选择有效的 CSV 导入文件');
+        return;
+      }
+
+      try {
+        const res = await bulkImport.mutateAsync({
+          type: 'twitter',
+          sources: parsedSources,
+        });
+        setBulkImportResults(res);
+      } catch (err) {
+        setBulkError(err instanceof Error ? err.message : '批量导入失败');
+      }
+    } else {
+      const input = bulkInput.trim();
+      if (!input) {
+        setBulkError('请输入要导入的 Twitter 用户名');
+        return;
+      }
+
+      // Parse input: split by comma, space, or newline
+      const identifiers = input
+        .split(/[\s,;\n]+/)
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0)
+        .map((id) => id.startsWith('@') ? id.substring(1) : id);
+
+      if (identifiers.length === 0) {
+        setBulkError('未能提取到有效的 Twitter 用户名');
+        return;
+      }
+
+      try {
+        const res = await bulkImport.mutateAsync({
+          type: 'twitter',
+          identifiers,
+        });
+        setBulkImportResults(res);
+        setBulkInput('');
+      } catch (err) {
+        setBulkError(err instanceof Error ? err.message : '批量导入失败');
+      }
+    }
+  };
+
   const localBiz = extractBiz(manualBizOrUrl);
   const isLocalExtracted = localBiz && localBiz !== manualBizOrUrl.trim();
   const finalBiz = isLocalExtracted ? localBiz : resolvedBizFromBackend || (manualBizOrUrl.trim().startsWith('http') ? '' : manualBizOrUrl.trim());
@@ -244,7 +530,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
         </DialogHeader>
 
         {/* Platform Selector */}
-        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-muted/65 border border-border/50 my-1">
+        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-muted/65 border border-border/50 my-1">
           <button
             onClick={() => {
               setPlatform('wechat');
@@ -275,27 +561,44 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
             <Twitter className="h-3.5 w-3.5 text-sky-500" />
             X (Twitter)
           </button>
+          <button
+            onClick={() => {
+              setPlatform('podcast');
+              setActiveTab('search');
+            }}
+            className={cn(
+              'flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer',
+              platform === 'podcast'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Headphones className="h-3.5 w-3.5 text-red-500" />
+            播客频道
+          </button>
         </div>
 
         {/* Tab Selector */}
         <div className="flex border-b border-border my-2">
-          <button
-            onClick={() => setActiveTab('search')}
-            className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-all duration-200 border-b-2 cursor-pointer',
-              activeTab === 'search'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-            )}
-          >
-            <Search className="h-3.5 w-3.5" />
-            搜索订阅
-          </button>
+          {platform !== 'wechat' && (
+            <button
+              onClick={() => setActiveTab('search')}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-all duration-200 border-b-2 cursor-pointer',
+                activeTab === 'search'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
+              <Search className="h-3.5 w-3.5" />
+              搜索订阅
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('manual')}
             className={cn(
               'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-all duration-200 border-b-2 cursor-pointer',
-              activeTab === 'manual'
+              activeTab === 'manual' || (platform === 'wechat' && activeTab === 'search')
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             )}
@@ -303,15 +606,29 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
             <Plus className="h-3.5 w-3.5" />
             手动添加
           </button>
+          {platform === 'twitter' && (
+            <button
+              onClick={() => setActiveTab('bulk')}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-all duration-200 border-b-2 cursor-pointer',
+                activeTab === 'bulk'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              )}
+            >
+              <Users className="h-3.5 w-3.5" />
+              批量导入
+            </button>
+          )}
         </div>
 
-        {activeTab === 'search' ? (
+        {activeTab === 'search' && (
           <div className="space-y-4">
             {/* Search Input */}
             <div className="mt-2">
               <Input
                 icon={<Search className="h-4 w-4" />}
-                placeholder={platform === 'wechat' ? "搜索公众号名称..." : "搜索 Twitter 用户..."}
+                placeholder={platform === 'wechat' ? "搜索公众号名称..." : platform === 'twitter' ? "搜索 Twitter 用户..." : "搜索播客名称 (调用 iTunes)..."}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 autoFocus
@@ -367,8 +684,10 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 ring-1 ring-border">
                             {platform === 'wechat' ? (
                               <MessageCircle className="h-5 w-5 text-primary" />
-                            ) : (
+                            ) : platform === 'twitter' ? (
                               <Twitter className="h-5 w-5 text-primary" />
+                            ) : (
+                              <Headphones className="h-5 w-5 text-primary" />
                             )}
                           </div>
                         )}
@@ -436,28 +755,21 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
               )}
             </div>
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'manual' && (
           platform === 'wechat' ? (
             <form onSubmit={handleWechatManualSubmit} className="space-y-3.5 mt-2">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">公众号名称 *</label>
-                <Input
-                  placeholder="例如: 腾讯科技"
-                  value={manualName}
-                  onChange={(e) => setManualName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">Biz ID 或公众号文章链接 *</label>
+                <label className="text-xs font-semibold text-foreground">微信文章链接 或 Biz ID *</label>
                 <div className="relative">
                   <Input
-                    placeholder="粘贴公众号文章的链接，或直接输入 Biz ID"
+                    placeholder="粘贴微信公众号的任意文章链接，或直接输入 Biz ID"
                     value={manualBizOrUrl}
                     onChange={(e) => setManualBizOrUrl(e.target.value)}
                     className={cn(parseWechatBiz.isPending && "pr-9")}
                     required
+                    autoFocus
                   />
                   {parseWechatBiz.isPending && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -467,21 +779,39 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                 </div>
                 {parseWechatBiz.isPending && (
                   <p className="text-[10px] text-primary animate-pulse mt-1">
-                    正在从文章链接中获取并解析 Biz ID...
+                    正在从文章链接中解析 Biz ID、公众号名称及头像...
                   </p>
                 )}
                 {!parseWechatBiz.isPending && finalBiz && (
-                  <div className="mt-1.5 p-2 rounded-lg bg-primary/5 border border-primary/10 flex items-center justify-between text-[11px]">
-                    <span className="text-muted-foreground">解析出的 Biz ID:</span>
-                    <span className="font-mono text-primary font-semibold select-all">{finalBiz}</span>
+                  <div className="mt-1.5 p-2.5 rounded-xl bg-primary/5 border border-primary/10 flex flex-col gap-1 text-[11px] animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Biz ID:</span>
+                      <span className="font-mono text-primary font-semibold select-all">{finalBiz}</span>
+                    </div>
+                    {manualName && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">公众号名称:</span>
+                        <span className="text-foreground font-semibold">{manualName}</span>
+                      </div>
+                    )}
                   </div>
                 )}
                 {!parseWechatBiz.isPending && !finalBiz && (
                   <div className="flex items-start gap-1 text-[10px] text-muted-foreground leading-normal mt-1">
                     <HelpCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60 mt-0.5" />
-                    <p>提示：支持手机复制的短链（如 `mp.weixin.qq.com/s/...`）。粘贴后系统会自动请求并解析其 HTML 以提取 Biz ID 建立订阅。</p>
+                    <p>提示：支持复制公众号任意文章的链接粘贴到此处。系统将全自动提取 Biz ID、名字及头像，实现一键极速订阅，完全免费。</p>
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">公众号名称 * (自动解析填充)</label>
+                <Input
+                  placeholder="例如: 腾讯科技"
+                  value={manualName}
+                  onChange={(e) => setManualName(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="space-y-1">
@@ -494,7 +824,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-foreground">头像链接 (可选)</label>
+                <label className="text-xs font-semibold text-foreground">头像链接 (可选) (自动解析填充)</label>
                 <Input
                   placeholder="填写图片 URL 地址"
                   value={manualAvatarUrl}
@@ -515,7 +845,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                 </Button>
               </div>
             </form>
-          ) : (
+          ) : platform === 'twitter' ? (
             <form onSubmit={handleTwitterManualSubmit} className="space-y-3.5 mt-2">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-foreground">用户昵称 *</label>
@@ -568,7 +898,253 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                 </Button>
               </div>
             </form>
+          ) : (
+            <form onSubmit={handlePodcastManualSubmit} className="space-y-3.5 mt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">播客频道名称 *</label>
+                <Input
+                  placeholder="例如: 忽左忽右"
+                  value={podcastManualName}
+                  onChange={(e) => setPodcastManualName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">RSS 订阅源地址 (Feed URL) *</label>
+                <Input
+                  placeholder="例如: https://feed.justpod.fm/leftright"
+                  value={podcastManualFeedUrl}
+                  onChange={(e) => setPodcastManualFeedUrl(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">播客简介 (可选)</label>
+                <Input
+                  placeholder="例如: 程衍樑和沙青青主持的文化沙龙播客"
+                  value={podcastManualDescription}
+                  onChange={(e) => setPodcastManualDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">封面图片链接 (可选)</label>
+                <Input
+                  placeholder="填写图片 URL 地址"
+                  value={podcastManualAvatarUrl}
+                  onChange={(e) => setPodcastManualAvatarUrl(e.target.value)}
+                />
+              </div>
+
+              {podcastManualError && (
+                <p className="text-xs font-medium text-destructive mt-1">{podcastManualError}</p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border mt-4">
+                <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                  取消
+                </Button>
+                <Button type="submit" size="sm" disabled={createSource.isPending}>
+                  {createSource.isPending ? '添加中...' : '添加订阅'}
+                </Button>
+              </div>
+            </form>
           )
+        )}
+
+        {activeTab === 'bulk' && (
+          <div className="space-y-4">
+            {bulkImportResults ? (
+              <div className="space-y-3 mt-2">
+                <div className="text-xs font-semibold text-muted-foreground flex justify-between items-center">
+                  <span>导入结果 ({bulkImportResults.filter(r => r.success).length} 成功, {bulkImportResults.filter(r => !r.success).length} 失败)</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px]"
+                    onClick={() => {
+                      setBulkImportResults(null);
+                      setFileName('');
+                      setParsedSources([]);
+                      setBulkInput('');
+                    }}
+                  >
+                    继续导入
+                  </Button>
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-1.5 border border-border rounded-xl p-3 bg-muted/20">
+                  {bulkImportResults.map((res, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs py-1">
+                      <span className="font-mono font-semibold">@{res.identifier}</span>
+                      {res.success ? (
+                        <span className="text-green-600 flex items-center gap-1 font-medium">
+                          <Check className="h-3.5 w-3.5" /> 导入成功
+                        </span>
+                      ) : (
+                        <span className="text-destructive font-medium flex items-center gap-1" title={res.error}>
+                          失败: {res.error || '重名或API错误'}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end pt-2">
+                  <Button size="sm" onClick={() => onOpenChange(false)}>
+                    完成
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleTwitterBulkSubmit} className="space-y-3.5 mt-2">
+                {/* Bulk Import Mode Selector */}
+                <div className="grid grid-cols-2 gap-1.5 p-0.5 rounded-lg bg-muted/65 border border-border/40 text-[11px] mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkMode('file');
+                      setBulkError('');
+                      setParsedSources([]);
+                    }}
+                    className={cn(
+                      "py-1.5 rounded-md font-semibold transition-all duration-200 cursor-pointer text-center",
+                      bulkMode === 'file'
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    CSV 文件导入
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkMode('text');
+                      setBulkError('');
+                      setParsedSources([]);
+                    }}
+                    className={cn(
+                      "py-1.5 rounded-md font-semibold transition-all duration-200 cursor-pointer text-center",
+                      bulkMode === 'text'
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    文本批量粘贴
+                  </button>
+                </div>
+
+                {parsedSources.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/10">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <FileText className="h-5 w-5 text-sky-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold truncate text-foreground">{fileName}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            解析成功，共 {parsedSources.length} 个待导入用户
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                        onClick={() => {
+                          setFileName('');
+                          setParsedSources([]);
+                          setBulkError('');
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Preview section */}
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-semibold text-muted-foreground">导入预览 (前 5 个):</p>
+                      <div className="border border-border/80 rounded-xl divide-y divide-border/60 bg-card overflow-hidden">
+                        {parsedSources.slice(0, 5).map((src, i) => (
+                          <div key={i} className="p-2.5 flex flex-col gap-0.5 text-xs">
+                            <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                              {src.avatarUrl ? (
+                                <img
+                                  src={src.avatarUrl}
+                                  alt={src.name}
+                                  className="h-5 w-5 rounded-full object-cover ring-1 ring-border shrink-0"
+                                />
+                              ) : (
+                                <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <Twitter className="h-3 w-3 text-primary" />
+                                </div>
+                              )}
+                              <span>{src.name}</span>
+                              <span className="font-mono text-[10px] text-muted-foreground font-normal">@{src.identifier}</span>
+                            </div>
+                            {src.description && (
+                              <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5 leading-normal">{src.description}</p>
+                            )}
+                          </div>
+                        ))}
+                        {parsedSources.length > 5 && (
+                          <div className="p-2 text-center text-[10px] text-muted-foreground bg-muted/5 border-t border-border/60">
+                            ... 还有 {parsedSources.length - 5} 个账户
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : bulkMode === 'file' ? (
+                  <div className="border border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center gap-3 bg-muted/5 hover:bg-muted/10 transition-colors cursor-pointer relative group">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <div className="p-3 rounded-full bg-primary/5 text-primary group-hover:scale-105 transition-transform duration-200">
+                      <Upload className="h-5 w-5" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-foreground">选择或拖拽 CSV 文件上传</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">支持包含 Username、Name、Bio 列的 CSV 列表</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">X (Twitter) 用户名列表</label>
+                    <textarea
+                      placeholder="输入要导入的用户名，支持用逗号、空格或换行分隔。例如：&#10;elonmusk, @OpenAI, dynamic_devs&#10;@anthropic_ai"
+                      value={bulkInput}
+                      onChange={(e) => setBulkInput(e.target.value)}
+                      className="w-full h-32 text-xs font-mono p-3 rounded-lg border border-border bg-card focus:outline-none focus:ring-1 focus:ring-primary leading-normal resize-none"
+                    />
+                    <p className="text-[10px] text-muted-foreground leading-normal">
+                      提示：批量导入时，系统会自动在后台调用 API 拉取这些账户的昵称、头像和简介，并自动订阅。请使用逗号、空格或换行分隔用户名。
+                    </p>
+                  </div>
+                )}
+
+                {bulkError && (
+                  <p className="text-xs font-medium text-destructive mt-1">{bulkError}</p>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-border mt-4">
+                  <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                    取消
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={bulkImport.isPending || (bulkMode !== 'text' && parsedSources.length === 0)}
+                  >
+                    {bulkImport.isPending ? '正在导入...' : '开始导入'}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
         )}
       </DialogContent>
     </Dialog>

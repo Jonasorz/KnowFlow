@@ -21,13 +21,22 @@ import {
   MessageCircle,
   Edit,
   Twitter,
+  Check,
 } from 'lucide-react';
 
 interface SourceCardProps {
   source: SourceInfo;
+  isBulkEditing?: boolean;
+  isSelected?: boolean;
+  onSelectToggle?: () => void;
 }
 
-export function SourceCard({ source }: SourceCardProps) {
+export function SourceCard({
+  source,
+  isBulkEditing = false,
+  isSelected = false,
+  onSelectToggle,
+}: SourceCardProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const deleteSource = useDeleteSource();
@@ -42,11 +51,14 @@ export function SourceCard({ source }: SourceCardProps) {
 
   return (
     <div
+      onClick={isBulkEditing ? onSelectToggle : undefined}
       className={cn(
         'group relative flex flex-col gap-4 rounded-xl border border-border bg-card p-5',
         'shadow-card transition-all duration-300 ease-[var(--ease-spring)]',
         'hover:shadow-card-hover hover:-translate-y-0.5',
-        isMenuOpen && 'z-30'
+        isMenuOpen && 'z-30',
+        isBulkEditing && 'cursor-pointer select-none',
+        isBulkEditing && isSelected && 'border-primary bg-primary/[0.03] ring-1 ring-primary shadow-md'
       )}
     >
       {/* Header */}
@@ -81,42 +93,55 @@ export function SourceCard({ source }: SourceCardProps) {
           </div>
         </div>
 
-        <DropdownMenu onOpenChange={setIsMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="opacity-70 hover:opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => syncSource.mutate(source.id)}
-              disabled={syncSource.isPending}
-            >
-              <RefreshCw className={cn('h-4 w-4', syncSource.isPending && 'animate-spin')} />
-              Sync now
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
-              <Edit className="h-4 w-4" />
-              Edit source
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              destructive
-              onClick={() => {
-                if (confirm(`Delete "${source.name}"? This will remove all its articles.`)) {
-                  deleteSource.mutate(source.id);
-                }
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete source
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {isBulkEditing ? (
+          <div
+            className={cn(
+              'flex h-5 w-5 items-center justify-center rounded-full border transition-all duration-200',
+              isSelected
+                ? 'border-primary bg-primary text-primary-foreground scale-105 shadow-sm'
+                : 'border-muted-foreground/30 bg-background/50 hover:border-muted-foreground/60'
+            )}
+          >
+            {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+          </div>
+        ) : (
+          <DropdownMenu onOpenChange={setIsMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="opacity-70 hover:opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => syncSource.mutate(source.id)}
+                disabled={syncSource.isPending}
+              >
+                <RefreshCw className={cn('h-4 w-4', syncSource.isPending && 'animate-spin')} />
+                Sync now
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
+                <Edit className="h-4 w-4" />
+                Edit source
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                destructive
+                onClick={() => {
+                  if (confirm(`Delete "${source.name}"? This will remove all its articles.`)) {
+                    deleteSource.mutate(source.id);
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete source
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Description */}

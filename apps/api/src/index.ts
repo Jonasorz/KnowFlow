@@ -8,6 +8,19 @@ import { articlesRoutes } from './routes/articles.js';
 import { aiRoutes } from './routes/ai.js';
 import { settingsRoutes } from './routes/settings.js';
 import { initializeDatabase } from './services/db.js';
+import { setGlobalDispatcher, ProxyAgent } from 'undici';
+
+// Configure global proxy dispatcher if environment variables are set
+const proxyUrl = process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy || process.env.HTTPS_PROXY;
+if (proxyUrl) {
+  console.log(`[Proxy] Detected proxy environment variable: ${proxyUrl}. Configuring global dispatcher.`);
+  try {
+    const dispatcher = new ProxyAgent(proxyUrl);
+    setGlobalDispatcher(dispatcher);
+  } catch (err) {
+    console.error('[Proxy] Failed to configure global ProxyAgent:', err);
+  }
+}
 
 const app = new Hono();
 

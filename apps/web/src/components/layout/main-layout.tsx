@@ -4,6 +4,7 @@ import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { AiSidebar } from '@/components/ai/ai-sidebar';
 import { SyncProgressIndicator } from './sync-progress-indicator';
+import { AudioPlayer } from '@/components/ui/audio-player';
 import { useAppStore } from '@/stores/app-store';
 import { cn } from '@/lib/utils';
 
@@ -112,6 +113,9 @@ export function MainLayout({ children, showHeader = true }: MainLayoutProps) {
           {/* AI Sidebar */}
           {aiSidebarOpen && <AiSidebar />}
         </div>
+
+        {/* Audio Player */}
+        <AudioPlayer />
       </div>
 
       {/* Sync Progress Indicator */}

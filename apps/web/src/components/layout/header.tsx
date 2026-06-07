@@ -1,5 +1,5 @@
 import { useAppStore } from '@/stores/app-store';
-import { useSyncAllSources } from '@/hooks/use-sources';
+import { useSyncAllSources, useSources } from '@/hooks/use-sources';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -37,12 +37,15 @@ export function Header() {
     setSortOrder,
     currentView,
     selectedSourceId,
+    selectedTag,
   } = useAppStore();
 
+  const { data: sources } = useSources();
   const syncAll = useSyncAllSources();
 
   const getTitle = () => {
     if (selectedSourceId) return 'Source Articles';
+    if (selectedTag) return `#${selectedTag}`;
     switch (currentView) {
       case 'starred': return 'Starred';
       case 'read': return 'Read';
@@ -54,6 +57,19 @@ export function Header() {
     publishedAt: 'Date',
     readCount: 'Popularity',
     createdAt: 'Added',
+  };
+
+  const handleSyncCurrent = () => {
+    if (selectedSourceId) {
+      syncAll.mutate([selectedSourceId]);
+    } else if (selectedTag && sources) {
+      const tagIds = sources
+        .filter((s) => s.tags && s.tags.includes(selectedTag))
+        .map((s) => s.id);
+      if (tagIds.length > 0) {
+        syncAll.mutate(tagIds);
+      }
+    }
   };
 
   return (
@@ -78,7 +94,7 @@ export function Header() {
 
         {/* View Toggle */}
         <div className="flex items-center rounded-lg border border-border p-0.5">
-          <Tooltip content="List view">
+          <Tooltip content="List view" side="bottom">
             <button
               onClick={() => setViewMode('list')}
               className={cn(
@@ -91,7 +107,7 @@ export function Header() {
               <LayoutList className="h-4 w-4" />
             </button>
           </Tooltip>
-          <Tooltip content="Grid view">
+          <Tooltip content="Grid view" side="bottom">
             <button
               onClick={() => setViewMode('grid')}
               className={cn(
@@ -146,18 +162,41 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Sync */}
-        <Tooltip content="Sync all sources">
+        {/* Sync Current (Only shown when a source or tag is selected) */}
+        {(selectedSourceId || selectedTag) && (
+          <Tooltip
+            content={selectedSourceId ? '同步当前订阅源' : `同步标签 (#${selectedTag}) 下的订阅源`}
+            side="bottom"
+          >
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleSyncCurrent}
+              disabled={syncAll.isPending}
+              className="text-primary hover:text-primary hover:bg-primary/10"
+            >
+              <RefreshCw
+                className={cn(
+                  'h-4 w-4 transition-transform',
+                  syncAll.isPending && 'animate-spin'
+                )}
+              />
+            </Button>
+          </Tooltip>
+        )}
+
+        {/* Sync All */}
+        <Tooltip content="同步所有订阅源" side="bottom">
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => syncAll.mutate()}
+            onClick={() => syncAll.mutate(undefined)}
             disabled={syncAll.isPending}
           >
             <RefreshCw
               className={cn(
                 'h-4 w-4 transition-transform',
-                syncAll.isPending && 'animate-spin'
+                syncAll.isPending && 'animate-spin' && !(selectedSourceId || selectedTag)
               )}
             />
           </Button>
