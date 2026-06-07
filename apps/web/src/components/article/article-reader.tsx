@@ -868,7 +868,7 @@ export function ArticleReader() {
 
         {/* Content Tab Swticher */}
         {tabs.length > 0 && (
-          <div className="flex border-b border-border mb-6 overflow-x-auto select-none no-scrollbar">
+          <div className="sticky top-0 z-30 bg-background pt-2 flex border-b border-border mb-6 overflow-x-auto select-none no-scrollbar">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -932,64 +932,66 @@ export function ArticleReader() {
             ) : (
               <div className="my-4">
                 {/* Transcript header controls */}
-                <div className="flex items-center justify-between mb-6 bg-muted/40 px-3.5 py-2 rounded-xl border border-border select-none">
-                  <span className="text-[11px] text-muted-foreground">💡 点击时间戳可跳转播放对应音频</span>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={autoScroll}
-                        onChange={(e) => setAutoScroll(e.target.checked)}
-                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 accent-primary cursor-pointer"
-                      />
-                      自动滚动
-                    </label>
-                    <div className="h-3 w-[1px] bg-border" />
-                    {isTranscribingThis ? (
-                      <Button disabled className="h-7 text-xs px-2.5 gap-1">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        转写中 ({transcribeProgress}%)...
-                      </Button>
-                    ) : (
+                <div className="sticky top-[46px] z-20 bg-background py-2 mb-2 select-none">
+                  <div className="flex items-center justify-between bg-muted/40 px-3.5 py-2 rounded-xl border border-border">
+                    <span className="text-[11px] text-muted-foreground">💡 点击时间戳可跳转播放对应音频</span>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={autoScroll}
+                          onChange={(e) => setAutoScroll(e.target.checked)}
+                          className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 accent-primary cursor-pointer"
+                        />
+                        自动滚动
+                      </label>
+                      <div className="h-3 w-[1px] bg-border" />
+                      {isTranscribingThis ? (
+                        <Button disabled className="h-7 text-xs px-2.5 gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          转写中 ({transcribeProgress}%)...
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => transcribeArticle.mutate(article.id)}
+                          className="h-7 text-xs px-2.5 gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+                        >
+                          <RotateCw className="h-3 w-3" />
+                          重新解析
+                        </Button>
+                      )}
+                      <div className="h-3 w-[1px] bg-border" />
+                      {identifySpeakers.isPending ? (
+                        <Button disabled className="h-7 text-xs px-2.5 gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          识别中...
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleIdentifySpeakersClick}
+                          className="h-7 text-xs px-2.5 gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+                          title="根据 Shownotes 分析并智能识别发言人姓名"
+                        >
+                          <UserCheck className="h-3 w-3" />
+                          识别发言人
+                        </Button>
+                      )}
+                      <div className="h-3 w-[1px] bg-border" />
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => transcribeArticle.mutate(article.id)}
+                        onClick={handleRenameSpeakersClick}
                         className="h-7 text-xs px-2.5 gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+                        title="手动修改或对调发言人真实姓名"
                       >
-                        <RotateCw className="h-3 w-3" />
-                        重新解析
+                        <User className="h-3 w-3" />
+                        修改发言人
                       </Button>
-                    )}
-                    <div className="h-3 w-[1px] bg-border" />
-                    {identifySpeakers.isPending ? (
-                      <Button disabled className="h-7 text-xs px-2.5 gap-1">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        识别中...
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleIdentifySpeakersClick}
-                        className="h-7 text-xs px-2.5 gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
-                        title="根据 Shownotes 分析并智能识别发言人姓名"
-                      >
-                        <UserCheck className="h-3 w-3" />
-                        识别发言人
-                      </Button>
-                    )}
-                    <div className="h-3 w-[1px] bg-border" />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRenameSpeakersClick}
-                      className="h-7 text-xs px-2.5 gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
-                      title="手动修改或对调发言人真实姓名"
-                    >
-                      <User className="h-3 w-3" />
-                      修改发言人
-                    </Button>
+                    </div>
                   </div>
                 </div>
 
