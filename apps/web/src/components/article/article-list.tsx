@@ -101,7 +101,7 @@ export function ArticleList() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="mx-auto max-w-6xl w-full p-6">
         <ArticleListSkeleton view={viewMode} />
       </div>
     );
@@ -109,7 +109,7 @@ export function ArticleList() {
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 px-4">
+      <div className="mx-auto max-w-6xl w-full flex flex-col items-center justify-center py-24 px-4">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 mb-6">
           <FileText className="h-8 w-8 text-destructive" />
         </div>
@@ -124,12 +124,16 @@ export function ArticleList() {
   const articles = data?.items || [];
 
   if (articles.length === 0) {
-    return <EmptyState />;
+    return (
+      <div className="mx-auto max-w-6xl w-full p-6">
+        <EmptyState />
+      </div>
+    );
   }
 
   if (viewMode === 'grid') {
     return (
-      <div className="p-6">
+      <div className="mx-auto max-w-6xl w-full p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {articles.map((article) => (
             <ArticleCard key={article.id} article={article} view="grid" />
@@ -147,7 +151,7 @@ export function ArticleList() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="mx-auto max-w-6xl w-full p-6 flex flex-col">
       {articles.map((article, i) => (
         <div key={article.id}>
           <ArticleCard article={article} view="list" />

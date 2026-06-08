@@ -703,14 +703,7 @@ export function ArticleReader() {
     <>
       <ReadingProgressBar />
 
-      <article className={cn(
-        "animate-fade-in mx-auto px-6 py-8 transition-all duration-300",
-        readerTab === 'mindmap'
-          ? "max-w-[90rem]"
-          : article.sourceType === 'podcast'
-            ? "max-w-6xl"
-            : "max-w-2xl"
-      )}>
+      <article className="animate-fade-in mx-auto px-6 py-8 max-w-6xl w-full">
         {/* Back button */}
         <Button
           variant="ghost"
@@ -890,15 +883,30 @@ export function ArticleReader() {
         {/* Content rendering based on active Tab */}
         {readerTab === 'shownotes' || readerTab === 'content' ? (
           /* Shownotes or WeChat/Twitter original article body */
-          <div
-            ref={contentRef}
-            className="prose-reader"
-            dangerouslySetInnerHTML={{
-              __html: article.contentHtml
-                ? cleanArticleHtml(article.contentHtml)
-                : article.contentText?.replace(/\n/g, '<br/>') || '<p>No content available.</p>',
-            }}
-          />
+          article.sourceType === 'wechat' && (article.contentHtml === null || article.contentHtml === undefined) ? (
+            <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border rounded-2xl bg-muted/10 my-8 w-full select-none">
+              <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+              <h3 className="text-sm font-semibold mb-1 text-foreground">
+                正在从微信公众号获取文章正文...
+              </h3>
+              <p className="text-xs text-muted-foreground text-center max-w-sm leading-relaxed mb-6">
+                首次打开此文章，系统正在后台同步解析并保存正文内容，这通常需要 1~2 秒，请稍候。
+              </p>
+              <div className="w-full max-w-xs bg-muted rounded-full h-1.5 overflow-hidden relative">
+                <div className="bg-primary h-full rounded-full absolute top-0 left-0 w-1/2 animate-progress-bar" />
+              </div>
+            </div>
+          ) : (
+            <div
+              ref={contentRef}
+              className="prose-reader"
+              dangerouslySetInnerHTML={{
+                __html: article.contentHtml
+                  ? cleanArticleHtml(article.contentHtml)
+                  : article.contentText?.replace(/\n/g, '<br/>') || '<p>No content available.</p>',
+              }}
+            />
+          )
         ) : readerTab === 'transcript' ? (
           /* Transcript Tab */
           <div className="space-y-4">
@@ -1251,6 +1259,7 @@ export function ArticleReader() {
                     isStreaming={isMindmapStreaming} 
                     transcriptText={article.transcriptText || undefined}
                     shownotes={article.contentText || undefined}
+                    showTimestamps={article.sourceType === 'podcast'}
                     onSeek={(time) => {
                       if (currentTrack?.id !== article.id && article.audioUrl) {
                         playTrack({

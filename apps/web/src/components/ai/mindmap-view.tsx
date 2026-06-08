@@ -14,6 +14,7 @@ interface MindmapViewProps {
   onSeek?: (time: number) => void;
   transcriptText?: string;
   shownotes?: string;
+  showTimestamps?: boolean;
 }
 
 const colors = [
@@ -101,7 +102,7 @@ function findBestTimestampMatch(
   return null;
 }
 
-export function MindmapView({ content, isStreaming, onSeek, transcriptText, shownotes }: MindmapViewProps) {
+export function MindmapView({ content, isStreaming, onSeek, transcriptText, shownotes, showTimestamps = true }: MindmapViewProps) {
   const [positions, setPositions] = useState<Record<string, { left: number; right: number; bottom: number; centerY: number }>>({});
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -211,7 +212,7 @@ export function MindmapView({ content, isStreaming, onSeek, transcriptText, show
     <div className="py-2">
       <div className="mb-4 text-[10px] text-muted-foreground font-medium flex items-center gap-1.5 select-none">
         <Network className="h-3 w-3 text-primary" />
-        <span>结构化脑图已渲染 (可左右滑动，支持点击时间戳跳转)</span>
+        <span>结构化脑图已渲染 (可左右滑动{showTimestamps ? '，支持点击时间戳跳转' : ''})</span>
       </div>
       
       {/* Scrollable Container with premium aesthetics */}
@@ -368,7 +369,9 @@ export function MindmapView({ content, isStreaming, onSeek, transcriptText, show
               {parsed.children?.map((chapter, idx) => {
                 const color = colors[idx % colors.length];
                 const { timestamp, cleanLabel } = parseTimestamp(chapter.label);
-                const matchedTimestamp = timestamp || findBestTimestampMatch(cleanLabel, shownotes, transcriptText);
+                const matchedTimestamp = showTimestamps
+                  ? (timestamp || findBestTimestampMatch(cleanLabel, shownotes, transcriptText))
+                  : null;
 
                 return (
                   <div key={chapter.id} className="flex items-center gap-16">

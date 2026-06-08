@@ -20,6 +20,9 @@ const { articles, sources } = schema;
 
 export const articlesRoutes = new Hono();
 
+const fetchingArticleIds = new Set<string>();
+const failedFetchCount = new Map<string, number>();
+
 // ============================================================
 // GET / — list articles (paginated, filterable)
 // ============================================================
@@ -214,32 +217,53 @@ articlesRoutes.get('/:id', async (c) => {
   let readCount = row.readCount;
   let likeCount = row.likeCount;
 
-  if (!contentHtml && row.originalUrl && row.sourceType === 'wechat') {
-    try {
-      const apiKey = await getDajialaApiKey();
-      if (apiKey) {
-        const wechat = new WechatSource(apiKey);
-        const content = await wechat.fetchArticleContent(row.originalUrl);
+  if ((row.contentHtml === null || row.contentText === null) && row.originalUrl && row.sourceType === 'wechat') {
+    const attempts = failedFetchCount.get(id) || 0;
+    if (attempts < 3 && !fetchingArticleIds.has(id)) {
+      fetchingArticleIds.add(id);
 
-        contentHtml = content.html;
-        contentText = content.text;
-        readCount = content.readCount ?? readCount;
-        likeCount = content.likeCount ?? likeCount;
+      // Start non-blocking background fetch
+      (async () => {
+        try {
+          const apiKey = await getDajialaApiKey();
+          if (apiKey && row.originalUrl) {
+            const wechat = new WechatSource(apiKey);
+            const content = await wechat.fetchArticleContent(row.originalUrl);
 
-        // Save to DB for future access
-        db.update(articles)
-          .set({
-            contentHtml,
-            contentText,
-            readCount,
-            likeCount,
-          })
-          .where(eq(articles.id, id))
-          .run();
-      }
-    } catch (err) {
-      console.error(`Failed to fetch article content for ${id}:`, err);
-      // Continue with empty content — don't fail the request
+            // Save to DB for future access
+            db.update(articles)
+              .set({
+                contentHtml: content.html,
+                contentText: content.text,
+                readCount: content.readCount ?? row.readCount,
+                likeCount: content.likeCount ?? row.likeCount,
+              })
+              .where(eq(articles.id, id))
+              .run();
+
+            failedFetchCount.delete(id);
+          }
+        } catch (err) {
+          console.error(`Failed to fetch article content for ${id} in background:`, err);
+          const currentAttempts = failedFetchCount.get(id) || 0;
+          const nextAttempts = currentAttempts + 1;
+          failedFetchCount.set(id, nextAttempts);
+
+          if (nextAttempts >= 3) {
+            // Write empty content to DB to stop infinite polling
+            db.update(articles)
+              .set({
+                contentHtml: '',
+                contentText: '',
+              })
+              .where(eq(articles.id, id))
+              .run();
+            failedFetchCount.delete(id);
+          }
+        } finally {
+          fetchingArticleIds.delete(id);
+        }
+      })();
     }
   }
 

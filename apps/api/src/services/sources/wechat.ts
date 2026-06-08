@@ -69,8 +69,10 @@ const API_BASE = 'https://www.dajiala.com/fbmain/monitor/v3';
 export class WechatApiService {
   constructor(private apiKey: string) {}
 
-  private async post<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
-    await rateLimit();
+  private async post<T>(endpoint: string, body: Record<string, unknown>, skipRateLimit = false): Promise<T> {
+    if (!skipRateLimit) {
+      await rateLimit();
+    }
 
     const url = `${API_BASE}/${endpoint}`;
     const payload = { key: this.apiKey, ...body };
@@ -118,8 +120,12 @@ export class WechatApiService {
     const articles: WechatArticle[] = (data.data || []).map((item) => ({
       title: item.title,
       url: item.url,
-      ctime: item.ctime,
-      cover: item.cover,
+      ctime: (item as any).post_time
+        ? new Date((item as any).post_time * 1000).toISOString()
+        : ((item as any).post_time_str
+          ? new Date((item as any).post_time_str).toISOString()
+          : item.ctime || new Date().toISOString()),
+      cover: (item as any).cover_url || item.cover,
       author: item.author,
       digest: item.digest,
     }));
@@ -164,21 +170,13 @@ export class WechatApiService {
     }>(cacheKey);
     if (cached) return cached;
 
-    const data = await this.post<{
-      code: number;
-      data: {
-        title?: string;
-        author?: string;
-        content?: string;
-        publish_time?: string;
-      };
-    }>('article_detail', { url });
+    const data = await this.post<any>('article_detail', { url }, true);
 
     const detail = {
-      title: data.data?.title || '',
-      author: data.data?.author || '',
-      content: data.data?.content || '',
-      publishTime: data.data?.publish_time || '',
+      title: data?.title || '',
+      author: data?.author || '',
+      content: data?.content || '',
+      publishTime: data?.post_time_str || (data?.post_time ? new Date(data.post_time * 1000).toISOString() : ''),
     };
 
     cache.set(cacheKey, detail, CACHE_TTL.ARTICLE_CONTENT); // permanent
@@ -237,18 +235,18 @@ export class WechatSource extends SourceAdapter {
     readCount?: number;
     likeCount?: number;
   }> {
-    // Fetch HTML, detail and stats in parallel
-    const [html, detail, stats] = await Promise.all([
-      this.api.getArticleHtml(url),
-      this.api.getArticleDetail(url),
-      this.api.getReadZan(url),
-    ]);
+    // 只获取详情内容即可，因为 getArticleDetail 返回的 content 已经是完整的 HTML，且包含标题和作者等元数据。
+    // 这避免了发起两次繁重的外部网络 API 请求，从而将抓取耗时直接缩短了近一半。
+    const detail = await this.api.getArticleDetail(url);
+
+    // 清洗 HTML 标签获取纯文本正文
+    const text = detail.content
+      ? detail.content.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim()
+      : '';
 
     return {
-      html,
-      text: detail.content,
-      readCount: stats.readCount,
-      likeCount: stats.likeCount,
+      html: detail.content,
+      text,
     };
   }
 }

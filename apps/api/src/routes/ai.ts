@@ -291,16 +291,18 @@ aiRoutes.post('/run', async (c) => {
 
   const aiResultId = uuidv4();
   const cleanedResult = cleanFluff(fullText, skill);
-  db.insert(aiResults)
-    .values({
-      id: aiResultId,
-      articleId,
-      skillType: skill,
-      modelUsed: model,
-      prompt: question || undefined,
-      result: cleanedResult,
-    })
-    .run();
+  if (cleanedResult && cleanedResult.trim().length > 0) {
+    db.insert(aiResults)
+      .values({
+        id: aiResultId,
+        articleId,
+        skillType: skill,
+        modelUsed: model,
+        prompt: question || undefined,
+        result: cleanedResult,
+      })
+      .run();
+  }
 
   const aiResultInfo: AIResultInfo = {
     id: aiResultId,
@@ -436,16 +438,19 @@ aiRoutes.post('/stream', async (c) => {
 
     // Save result to DB after streaming is complete
     const aiResultId = uuidv4();
-    db.insert(aiResults)
-      .values({
-        id: aiResultId,
-        articleId,
-        skillType: skill,
-        modelUsed: model,
-        prompt: question || undefined,
-        result: cleanFluff(fullText, skill),
-      })
-      .run();
+    const cleanedResult = cleanFluff(fullText, skill);
+    if (cleanedResult && cleanedResult.trim().length > 0) {
+      db.insert(aiResults)
+        .values({
+          id: aiResultId,
+          articleId,
+          skillType: skill,
+          modelUsed: model,
+          prompt: question || undefined,
+          result: cleanedResult,
+        })
+        .run();
+    }
   });
 });
 

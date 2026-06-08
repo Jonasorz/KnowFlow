@@ -29,6 +29,13 @@ export function useArticle(id: string) {
     queryKey: ['articles', id],
     queryFn: () => articlesApi.get(id),
     enabled: !!id,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data && data.sourceType === 'wechat' && (data.contentHtml === null || data.contentHtml === undefined)) {
+        return 400;
+      }
+      return false;
+    },
   });
 }
 
