@@ -1040,9 +1040,9 @@ export function SettingsPage() {
             {/* Model and Active Provider Selector Box */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-6 animate-fade-in">
               {/* Provider Radio Selector */}
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium">当前启用服务商</label>
-                <div className="flex rounded-xl bg-muted p-1 select-none">
+              <div className="flex flex-col gap-2.5">
+                <label className="text-sm font-medium">选择要启用的服务商</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {(['deepseek', 'moonshot', 'openrouter'] as const).map((p) => {
                     const isActive = selectedProvider === p;
                     const label = p === 'deepseek' ? 'DeepSeek' : p === 'moonshot' ? 'Moonshot (Kimi)' : 'OpenRouter';
@@ -1052,13 +1052,26 @@ export function SettingsPage() {
                         type="button"
                         onClick={() => handleSelectProvider(p)}
                         className={cn(
-                          'flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer outline-none',
+                          'flex items-center justify-between px-4 py-3.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer outline-none select-none text-left',
                           isActive
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
+                            ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                            : 'border-border bg-card text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
                         )}
                       >
-                        {label}
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            'h-4 w-4 rounded-full border flex items-center justify-center transition-colors shrink-0',
+                            isActive ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/30'
+                          )}>
+                            {isActive && <div className="h-1.5 w-1.5 rounded-full bg-background" />}
+                          </div>
+                          <span className="font-medium text-foreground">{label}</span>
+                        </div>
+                        {isActive && (
+                          <Badge variant="success" className="text-[10px] py-0 px-1.5 font-medium h-5 shrink-0">
+                            已启用
+                          </Badge>
+                        )}
                       </button>
                     );
                   })}
