@@ -1041,38 +1041,10 @@ export function ArticleReader() {
                       暂无 AI 参考与实体
                     </h3>
                     <p className="text-xs text-muted-foreground text-center max-w-sm mb-6 leading-relaxed">
-                      尚未为本篇内容生成 AI 总结。请在下方选择大语言模型，点击按钮开始生成总结并提炼其中的参考与知识实体。
+                      尚未为本篇内容生成 AI 总结。点击下方按钮开始生成总结并提炼其中的参考与知识实体。
                     </p>
                     
                     <div className="flex items-center gap-3 w-full max-w-md justify-center select-none">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger>
-                          <Button variant="outline" size="sm" className="text-xs max-w-[200px] truncate h-8">
-                            <span>{selectedModelLabel}</span>
-                            <ChevronDown className="h-3 w-3 ml-1 text-muted-foreground shrink-0" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-64 max-h-[300px] overflow-y-auto">
-                          <DropdownMenuLabel className="pb-1 text-xs">选择模型</DropdownMenuLabel>
-                          <div className="px-2 pb-2 pt-1" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="text"
-                              placeholder="搜索模型..."
-                              value={modelSearch}
-                              onChange={(e) => setModelSearch(e.target.value)}
-                              className="w-full px-2.5 py-1.5 text-xs rounded-md border border-border bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary"
-                            />
-                          </div>
-                          <DropdownMenuSeparator />
-                          {filteredModels.map((m) => (
-                            <DropdownMenuItem key={m.value} onClick={() => setSelectedModel(m.value)}>
-                              <span className="flex-1 text-xs truncate">{m.label}</span>
-                              {selectedModel === m.value && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
                       <Button size="sm" onClick={() => {
                         handleGenerate('summary');
                         setEntitiesTriggered(true);
@@ -1096,38 +1068,10 @@ export function ArticleReader() {
                   暂无 AI {readerTab === 'summary' ? '总结' : '导图'}
                 </h3>
                 <p className="text-xs text-muted-foreground text-center max-w-sm mb-6 leading-relaxed">
-                  尚未为本篇内容生成 AI {readerTab === 'summary' ? '总结和深度知识要点' : '结构化思维脑图'}。请在下方选择大语言模型并开始生成。
+                  尚未为本篇内容生成 AI {readerTab === 'summary' ? '总结和深度知识要点' : '结构化思维脑图'}。点击下方按钮开始生成。
                 </p>
                 
                 <div className="flex items-center gap-3 w-full max-w-md justify-center select-none">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <Button variant="outline" size="sm" className="text-xs max-w-[200px] truncate h-8">
-                        <span>{selectedModelLabel}</span>
-                        <ChevronDown className="h-3 w-3 ml-1 text-muted-foreground shrink-0" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-64 max-h-[300px] overflow-y-auto">
-                      <DropdownMenuLabel className="pb-1 text-xs">选择模型</DropdownMenuLabel>
-                      <div className="px-2 pb-2 pt-1" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="text"
-                          placeholder="搜索模型..."
-                          value={modelSearch}
-                          onChange={(e) => setModelSearch(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs rounded-md border border-border bg-muted/40 focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-                      <DropdownMenuSeparator />
-                      {filteredModels.map((m) => (
-                        <DropdownMenuItem key={m.value} onClick={() => setSelectedModel(m.value)}>
-                          <span className="flex-1 text-xs truncate">{m.label}</span>
-                          {selectedModel === m.value && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
- 
                   <Button size="sm" onClick={() => handleGenerate(readerTab as 'summary' | 'mindmap')} className="text-xs h-8 shadow-sm">
                     <Play className="h-3.5 w-3.5 mr-1" />
                     开始生成
@@ -1165,25 +1109,6 @@ export function ArticleReader() {
                       </Button>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger>
-                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2.5 gap-1 hover:bg-muted text-muted-foreground hover:text-foreground">
-                              <span>{selectedModelLabel}</span>
-                              <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-64 max-h-[300px] overflow-y-auto">
-                            <DropdownMenuLabel className="pb-1 text-xs">选择模型</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {filteredModels.map((m) => (
-                              <DropdownMenuItem key={m.value} onClick={() => setSelectedModel(m.value)}>
-                                <span className="flex-1 text-xs truncate">{m.label}</span>
-                                {selectedModel === m.value && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <div className="h-3 w-[1px] bg-border" />
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1220,28 +1145,9 @@ export function ArticleReader() {
                         未检测到参考与实体
                       </h3>
                       <p className="text-xs text-muted-foreground text-center max-w-sm mb-6 leading-relaxed">
-                        本期节目的 AI 总结中未检测到参考与实体信息。您可以尝试选择其他大语言模型并重新生成总结。
+                        本期节目的 AI 总结中未检测到参考与实体信息。您可以尝试重新生成总结。
                       </p>
                       <div className="flex items-center gap-3 w-full max-w-md justify-center select-none">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger>
-                            <Button variant="outline" size="sm" className="text-xs max-w-[200px] truncate h-8">
-                              <span>{selectedModelLabel}</span>
-                              <ChevronDown className="h-3 w-3 ml-1 text-muted-foreground shrink-0" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-64 max-h-[300px] overflow-y-auto">
-                            <DropdownMenuLabel className="pb-1 text-xs">选择模型</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {filteredModels.map((m) => (
-                              <DropdownMenuItem key={m.value} onClick={() => setSelectedModel(m.value)}>
-                                <span className="flex-1 text-xs truncate">{m.label}</span>
-                                {selectedModel === m.value && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
                         <Button size="sm" onClick={() => handleGenerate('summary')} className="text-xs h-8 shadow-sm">
                           <RotateCw className="h-3.5 w-3.5 mr-1" />
                           重新生成
