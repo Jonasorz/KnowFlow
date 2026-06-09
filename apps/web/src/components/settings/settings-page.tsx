@@ -768,6 +768,7 @@ export function SettingsPage() {
   const { theme, setTheme } = useAppStore();
   const { data: openRouterModels } = useOpenRouterModels();
   const [modelSearch, setModelSearch] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<'deepseek' | 'moonshot' | 'openrouter'>('deepseek');
 
   const [formState, setFormState] = useState<Partial<Settings>>({});
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'llm' | 'prompts-general' | 'prompts-podcast' | 'general'>('subscriptions');
@@ -775,6 +776,16 @@ export function SettingsPage() {
   useEffect(() => {
     if (settings) {
       setFormState(settings);
+
+      // Auto-detect provider based on current default model
+      const currentModel = settings.defaultAIModel || 'deepseek-chat';
+      if (currentModel.startsWith('openrouter/')) {
+        setSelectedProvider('openrouter');
+      } else if (currentModel.startsWith('kimi-')) {
+        setSelectedProvider('moonshot');
+      } else {
+        setSelectedProvider('deepseek');
+      }
     }
   }, [settings]);
 
@@ -786,25 +797,58 @@ export function SettingsPage() {
     { id: 'general' as const, label: '常规设置', icon: <Monitor className="h-4 w-4" /> },
   ];
 
-  const allModels = useMemo(() => {
-    const list = [...aiModels];
-    if (openRouterModels && Array.isArray(openRouterModels)) {
-      openRouterModels.forEach((m: any) => {
-        list.push({
-          value: `openrouter/${m.id}`,
-          label: `OpenRouter: ${m.name || m.id}`,
+  const providerModels = useMemo(() => {
+    if (selectedProvider === 'deepseek') {
+      return [
+        { value: 'deepseek-chat', label: 'DeepSeek Chat' },
+        { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner' },
+      ];
+    } else if (selectedProvider === 'moonshot') {
+      return [
+        { value: 'kimi-k2.6', label: 'Kimi (K2.6)' },
+        { value: 'kimi-8k', label: 'Kimi (8k)' },
+        { value: 'kimi-32k', label: 'Kimi (32k)' },
+      ];
+    } else {
+      const list: { value: string; label: string }[] = [];
+      if (openRouterModels && Array.isArray(openRouterModels)) {
+        openRouterModels.forEach((m: any) => {
+          list.push({
+            value: `openrouter/${m.id}`,
+            label: m.name || m.id,
+          });
         });
-      });
+      }
+      return list;
     }
-    return list;
-  }, [openRouterModels]);
+  }, [selectedProvider, openRouterModels]);
 
-  const filteredModels = useMemo(() => {
-    return allModels.filter((m) =>
+  const filteredProviderModels = useMemo(() => {
+    return providerModels.filter((m) =>
       m.label.toLowerCase().includes(modelSearch.toLowerCase()) ||
       m.value.toLowerCase().includes(modelSearch.toLowerCase())
     );
-  }, [allModels, modelSearch]);
+  }, [providerModels, modelSearch]);
+
+  const currentModelLabel = useMemo(() => {
+    const currentVal = formState.defaultAIModel || 'deepseek-chat';
+    const staticModels = [
+      { value: 'deepseek-chat', label: 'DeepSeek Chat' },
+      { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner' },
+      { value: 'kimi-k2.6', label: 'Kimi (K2.6)' },
+      { value: 'kimi-8k', label: 'Kimi (8k)' },
+      { value: 'kimi-32k', label: 'Kimi (32k)' },
+    ];
+    const foundStatic = staticModels.find((m) => m.value === currentVal);
+    if (foundStatic) return foundStatic.label;
+
+    if (currentVal.startsWith('openrouter/') && openRouterModels && Array.isArray(openRouterModels)) {
+      const modelId = currentVal.replace('openrouter/', '');
+      const foundOR = openRouterModels.find((m: any) => m.id === modelId);
+      if (foundOR) return `OpenRouter: ${foundOR.name || foundOR.id}`;
+    }
+    return currentVal;
+  }, [formState.defaultAIModel, openRouterModels]);
 
   const handleSaveKey = (key: keyof Settings) => {
     updateSettings.mutate({ [key]: formState[key] });
@@ -914,19 +958,113 @@ export function SettingsPage() {
               <h2 className="text-base font-semibold">AI LLM API 密钥与模型</h2>
             </div>
 
-            {/* Default AI Model */}
-            <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+            {/* Hint Alert */}
+            <div className="flex gap-2.5 p-3.5 bg-primary/5 border border-primary/10 rounded-xl text-xs text-muted-foreground leading-normal select-none mb-4 animate-fade-in">
+              <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+              <div>
+                <span className="font-semibold text-foreground/90">使用说明：</span>
+                DeepSeek、Moonshot (Kimi)、OpenRouter 三个 API 服务商<strong>只要填其中一个</strong>的密钥即可正常工作。系统已将各服务商的模型列表进行隔离，请在下方先选择要启用的服务商，再配置其密钥与模型。
+              </div>
+            </div>
+
+            {/* Provider Segment Selector */}
+            <div className="flex rounded-xl bg-muted p-1 select-none mb-4">
+              {(['deepseek', 'moonshot', 'openrouter'] as const).map((p) => {
+                const isActive = selectedProvider === p;
+                const label = p === 'deepseek' ? 'DeepSeek' : p === 'moonshot' ? 'Moonshot (Kimi)' : 'OpenRouter';
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => {
+                      setSelectedProvider(p);
+                      // Clear model search query on switch
+                      setModelSearch('');
+                    }}
+                    className={cn(
+                      'flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer outline-none',
+                      isActive
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Config Box for selected provider */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-6 animate-fade-in">
+              {/* API Key Input */}
+              {selectedProvider === 'deepseek' && (
+                <ApiKeyField
+                  label="DeepSeek API Key"
+                  provider="deepseek"
+                  value={formState.deepseekApiKey || ''}
+                  onChange={(v) => setFormState((s) => ({ ...s, deepseekApiKey: v }))}
+                  onSave={() => handleSaveKey('deepseekApiKey')}
+                  saving={updateSettings.isPending}
+                >
+                  {settings?.deepseekApiKey && (
+                    <DeepSeekBalanceQuery />
+                  )}
+                </ApiKeyField>
+              )}
+
+              {selectedProvider === 'moonshot' && (
+                <ApiKeyField
+                  label="Moonshot (Kimi) API Key"
+                  provider="moonshot"
+                  value={formState.moonshotApiKey || ''}
+                  onChange={(v) => setFormState((s) => ({ ...s, moonshotApiKey: v }))}
+                  onSave={() => handleSaveKey('moonshotApiKey')}
+                  saving={updateSettings.isPending}
+                >
+                  {settings?.moonshotApiKey && (
+                    <MoonshotBalanceQuery />
+                  )}
+                </ApiKeyField>
+              )}
+
+              {selectedProvider === 'openrouter' && (
+                <ApiKeyField
+                  label="OpenRouter API Key"
+                  provider="openrouter"
+                  value={formState.openrouterApiKey || ''}
+                  onChange={(v) => setFormState((s) => ({ ...s, openrouterApiKey: v }))}
+                  onSave={() => handleSaveKey('openrouterApiKey')}
+                  saving={updateSettings.isPending}
+                >
+                  {settings?.openrouterApiKey && (
+                    <OpenRouterBalanceQuery />
+                  )}
+                </ApiKeyField>
+              )}
+
+              <Separator />
+
+              {/* Model Dropdown */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">默认 AI 模型</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">默认 AI 模型</label>
+                  {!formState[`${selectedProvider}ApiKey` as keyof Settings] && (
+                    <span className="text-[10px] text-amber-500 font-medium select-none">
+                      ⚠️ 提示：请先配置并保存上方密钥
+                    </span>
+                  )}
+                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger>
                     <Button variant="outline" className="w-full justify-between">
-                      {allModels.find((m) => m.value === (formState.defaultAIModel || 'deepseek-chat'))?.label || formState.defaultAIModel || 'Select model'}
+                      {currentModelLabel}
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-full min-w-[280px] max-h-[350px] overflow-y-auto">
-                    <DropdownMenuLabel className="pb-1">Select Default Model</DropdownMenuLabel>
+                    <DropdownMenuLabel className="pb-1 text-xs">
+                      选择默认模型 ({selectedProvider === 'deepseek' ? 'DeepSeek' : selectedProvider === 'moonshot' ? 'Kimi' : 'OpenRouter'})
+                    </DropdownMenuLabel>
                     <div className="px-2 pb-2 pt-1" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="text"
@@ -937,7 +1075,7 @@ export function SettingsPage() {
                       />
                     </div>
                     <DropdownMenuSeparator />
-                    {filteredModels.map((model) => (
+                    {filteredProviderModels.map((model) => (
                       <DropdownMenuItem
                         key={model.value}
                         onClick={() => {
@@ -951,8 +1089,8 @@ export function SettingsPage() {
                         )}
                       </DropdownMenuItem>
                     ))}
-                    {filteredModels.length === 0 && (
-                      <div className="text-[11px] text-muted-foreground text-center py-4">
+                    {filteredProviderModels.length === 0 && (
+                      <div className="text-[11px] text-muted-foreground text-center py-4 animate-pulse">
                         未找到匹配的模型
                       </div>
                     )}
@@ -961,62 +1099,30 @@ export function SettingsPage() {
               </div>
             </div>
 
-            {/* API Keys */}
+            {/* Other keys section */}
+            <div className="flex items-center gap-2 mt-6 mb-1">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold">附加配置 API 密钥</h2>
+            </div>
             <div className="rounded-xl border border-border bg-card p-5 space-y-5">
               <ApiKeyField
-                label="DeepSeek API Key"
-                provider="deepseek"
-                value={formState.deepseekApiKey || ''}
-                onChange={(v) => setFormState((s) => ({ ...s, deepseekApiKey: v }))}
-                onSave={() => handleSaveKey('deepseekApiKey')}
-                saving={updateSettings.isPending}
-              >
-                {settings?.deepseekApiKey && (
-                  <DeepSeekBalanceQuery />
-                )}
-              </ApiKeyField>
-              <Separator />
-              <ApiKeyField
-                label="Moonshot (Kimi) API Key"
-                provider="moonshot"
-                value={formState.moonshotApiKey || ''}
-                onChange={(v) => setFormState((s) => ({ ...s, moonshotApiKey: v }))}
-                onSave={() => handleSaveKey('moonshotApiKey')}
-                saving={updateSettings.isPending}
-              >
-                {settings?.moonshotApiKey && (
-                  <MoonshotBalanceQuery />
-                )}
-              </ApiKeyField>
-              <Separator />
-              <ApiKeyField
-                label="OpenRouter API Key"
-                provider="openrouter"
-                value={formState.openrouterApiKey || ''}
-                onChange={(v) => setFormState((s) => ({ ...s, openrouterApiKey: v }))}
-                onSave={() => handleSaveKey('openrouterApiKey')}
-                saving={updateSettings.isPending}
-              >
-                {settings?.openrouterApiKey && (
-                  <OpenRouterBalanceQuery />
-                )}
-              </ApiKeyField>
-              <Separator />
-              <ApiKeyField
-                label="Tavily Search API Key"
+                label="Tavily Search API Key (可选)"
                 provider="tavily"
                 value={formState.tavilyApiKey || ''}
                 onChange={(v) => setFormState((s) => ({ ...s, tavilyApiKey: v }))}
                 onSave={() => handleSaveKey('tavilyApiKey')}
                 saving={updateSettings.isPending}
               >
+                <p className="text-xs text-muted-foreground mt-1 select-none leading-normal">
+                  提示：Tavily API 用于 AI 问答时的实时联网搜索。若不配置，AI 问答功能依然可用，但将仅基于文章本身的内容进行回答。
+                </p>
                 {settings?.tavilyApiKey && (
                   <TavilyBalanceQuery />
                 )}
               </ApiKeyField>
               <Separator />
               <ApiKeyField
-                label="通义听悟 (DashScope) API Key"
+                label="通义听悟 (DashScope) API Key (可选)"
                 provider="dashscope"
                 value={formState.dashscopeApiKey || ''}
                 onChange={(v) => setFormState((s) => ({ ...s, dashscopeApiKey: v }))}
@@ -1024,7 +1130,7 @@ export function SettingsPage() {
                 saving={updateSettings.isPending}
               >
                 <p className="text-xs text-muted-foreground mt-1 select-none leading-normal">
-                  提示：通义听悟 API 主要用于播客音频的语音转写与发言人角色识别（播客专用模型）。
+                  提示：通义听悟 API 主要用于播客音频的语音转写与发言人角色识别（播客专用，非必填）。
                 </p>
                 {settings?.dashscopeApiKey && (
                   <DashScopeBalanceQuery />
