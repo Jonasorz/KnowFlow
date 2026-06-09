@@ -854,6 +854,25 @@ export function SettingsPage() {
     updateSettings.mutate({ [key]: formState[key] });
   };
 
+  const handleSelectProvider = (p: 'deepseek' | 'moonshot' | 'openrouter') => {
+    setSelectedProvider(p);
+    setModelSearch('');
+
+    let defaultModel = 'deepseek-chat';
+    if (p === 'moonshot') {
+      defaultModel = 'kimi-k2.6';
+    } else if (p === 'openrouter') {
+      if (openRouterModels && openRouterModels.length > 0) {
+        defaultModel = `openrouter/${openRouterModels[0].id}`;
+      } else {
+        defaultModel = 'openrouter/google/gemini-2.5-flash';
+      }
+    }
+
+    setFormState((s) => ({ ...s, defaultAIModel: defaultModel }));
+    updateSettings.mutate({ defaultAIModel: defaultModel });
+  };
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-2xl p-6 space-y-8">
@@ -955,7 +974,7 @@ export function SettingsPage() {
           <section className="space-y-4">
             <div className="flex items-center gap-2 mb-1">
               <Key className="h-4 w-4 text-primary" />
-              <h2 className="text-base font-semibold">AI LLM API 密钥与模型</h2>
+              <h2 className="text-base font-semibold">服务商密钥配置</h2>
             </div>
 
             {/* Hint Alert */}
@@ -963,84 +982,88 @@ export function SettingsPage() {
               <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
               <div>
                 <span className="font-semibold text-foreground/90">使用说明：</span>
-                DeepSeek、Moonshot (Kimi)、OpenRouter 三个 API 服务商<strong>只要填其中一个</strong>的密钥即可正常工作。系统已将各服务商的模型列表进行隔离，请在下方先选择要启用的服务商，再配置其密钥与模型。
+                DeepSeek、Moonshot (Kimi)、OpenRouter 三个 API 服务商<strong>只要填其中一个</strong>的密钥即可正常工作。系统已将各服务商的模型列表进行隔离，请在下方配置您的密钥，并在“启用与模型配置”中显式选择启用的服务商与模型。
               </div>
             </div>
 
-            {/* Provider Segment Selector */}
-            <div className="flex rounded-xl bg-muted p-1 select-none mb-4">
-              {(['deepseek', 'moonshot', 'openrouter'] as const).map((p) => {
-                const isActive = selectedProvider === p;
-                const label = p === 'deepseek' ? 'DeepSeek' : p === 'moonshot' ? 'Moonshot (Kimi)' : 'OpenRouter';
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => {
-                      setSelectedProvider(p);
-                      // Clear model search query on switch
-                      setModelSearch('');
-                    }}
-                    className={cn(
-                      'flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer outline-none',
-                      isActive
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+            {/* API Keys Configuration Box */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-5 animate-fade-in">
+              <ApiKeyField
+                label="DeepSeek API Key"
+                provider="deepseek"
+                value={formState.deepseekApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, deepseekApiKey: v }))}
+                onSave={() => handleSaveKey('deepseekApiKey')}
+                saving={updateSettings.isPending}
+              >
+                {settings?.deepseekApiKey && (
+                  <DeepSeekBalanceQuery />
+                )}
+              </ApiKeyField>
+
+              <Separator />
+
+              <ApiKeyField
+                label="Moonshot (Kimi) API Key"
+                provider="moonshot"
+                value={formState.moonshotApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, moonshotApiKey: v }))}
+                onSave={() => handleSaveKey('moonshotApiKey')}
+                saving={updateSettings.isPending}
+              >
+                {settings?.moonshotApiKey && (
+                  <MoonshotBalanceQuery />
+                )}
+              </ApiKeyField>
+
+              <Separator />
+
+              <ApiKeyField
+                label="OpenRouter API Key"
+                provider="openrouter"
+                value={formState.openrouterApiKey || ''}
+                onChange={(v) => setFormState((s) => ({ ...s, openrouterApiKey: v }))}
+                onSave={() => handleSaveKey('openrouterApiKey')}
+                saving={updateSettings.isPending}
+              >
+                {settings?.openrouterApiKey && (
+                  <OpenRouterBalanceQuery />
+                )}
+              </ApiKeyField>
             </div>
 
-            {/* Config Box for selected provider */}
+            <div className="flex items-center gap-2 mt-6 mb-1">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold">启用与模型配置</h2>
+            </div>
+
+            {/* Model and Active Provider Selector Box */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-6 animate-fade-in">
-              {/* API Key Input */}
-              {selectedProvider === 'deepseek' && (
-                <ApiKeyField
-                  label="DeepSeek API Key"
-                  provider="deepseek"
-                  value={formState.deepseekApiKey || ''}
-                  onChange={(v) => setFormState((s) => ({ ...s, deepseekApiKey: v }))}
-                  onSave={() => handleSaveKey('deepseekApiKey')}
-                  saving={updateSettings.isPending}
-                >
-                  {settings?.deepseekApiKey && (
-                    <DeepSeekBalanceQuery />
-                  )}
-                </ApiKeyField>
-              )}
-
-              {selectedProvider === 'moonshot' && (
-                <ApiKeyField
-                  label="Moonshot (Kimi) API Key"
-                  provider="moonshot"
-                  value={formState.moonshotApiKey || ''}
-                  onChange={(v) => setFormState((s) => ({ ...s, moonshotApiKey: v }))}
-                  onSave={() => handleSaveKey('moonshotApiKey')}
-                  saving={updateSettings.isPending}
-                >
-                  {settings?.moonshotApiKey && (
-                    <MoonshotBalanceQuery />
-                  )}
-                </ApiKeyField>
-              )}
-
-              {selectedProvider === 'openrouter' && (
-                <ApiKeyField
-                  label="OpenRouter API Key"
-                  provider="openrouter"
-                  value={formState.openrouterApiKey || ''}
-                  onChange={(v) => setFormState((s) => ({ ...s, openrouterApiKey: v }))}
-                  onSave={() => handleSaveKey('openrouterApiKey')}
-                  saving={updateSettings.isPending}
-                >
-                  {settings?.openrouterApiKey && (
-                    <OpenRouterBalanceQuery />
-                  )}
-                </ApiKeyField>
-              )}
+              {/* Provider Radio Selector */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">当前启用服务商</label>
+                <div className="flex rounded-xl bg-muted p-1 select-none">
+                  {(['deepseek', 'moonshot', 'openrouter'] as const).map((p) => {
+                    const isActive = selectedProvider === p;
+                    const label = p === 'deepseek' ? 'DeepSeek' : p === 'moonshot' ? 'Moonshot (Kimi)' : 'OpenRouter';
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => handleSelectProvider(p)}
+                        className={cn(
+                          'flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer outline-none',
+                          isActive
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <Separator />
 
@@ -1050,7 +1073,7 @@ export function SettingsPage() {
                   <label className="text-sm font-medium">默认 AI 模型</label>
                   {!formState[`${selectedProvider}ApiKey` as keyof Settings] && (
                     <span className="text-[10px] text-amber-500 font-medium select-none">
-                      ⚠️ 提示：请先配置并保存上方密钥
+                      ⚠️ 提示：请先配置并保存上方 {selectedProvider === 'deepseek' ? 'DeepSeek' : selectedProvider === 'moonshot' ? 'Moonshot' : 'OpenRouter'} 的密钥
                     </span>
                   )}
                 </div>
