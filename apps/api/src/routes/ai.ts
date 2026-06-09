@@ -69,7 +69,7 @@ async function generatePrompts(
             body: JSON.stringify({
               api_key: tavilyKey,
               query: question!,
-              search_depth: 'basic',
+              search_depth: 'advanced',
               max_results: 3,
             }),
           });
@@ -90,12 +90,13 @@ async function generatePrompts(
       }
     }
 
-    systemPrompt = `你是一个智能问答助手。基于提供的文章内容${searchContext ? '以及联网搜索补充的信息' : ''}回答用户的问题。
+    const currentDate = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+    systemPrompt = `你是一个智能问答助手。当前日期是：${currentDate}。基于提供的文章内容${searchContext ? '以及联网搜索补充的信息' : ''}回答用户的问题。
 规则：
 1. ${searchContext ? '结合文章内容 and 联网搜索信息回答' : '只基于文章内容回答，不要编造信息'}
 2. 如果信息不足以回答，请明确告知
 3. 回答要简洁明了，用中文回答
-4. ${searchContext ? '在引用的地方标注引用序号，例如 [1]，并在回答末尾以超链接或纯文本格式列出参考链接和来源名称。' : '适当引用原文来支持你的回答'}`;
+4. ${searchContext ? '在引用的地方标注引用序号，例如 [1]，并在回答末尾以超链接或纯文本格式列出参考链接 and 来源名称。' : '适当引用原文来支持你的回答'}`;
 
     userPrompt = `文章内容：\n${content}\n${searchContext}\n\n问题：${question}`;
   } else {
