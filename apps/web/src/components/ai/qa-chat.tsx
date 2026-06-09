@@ -23,6 +23,24 @@ export function QAChat({ articleId, model }: QAChatProps) {
   const { content: streamContent, isStreaming, error, startStream, reset } = useAiStream();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevStreamContent = useRef('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea height
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = 'auto';
+    const scrollHeight = textarea.scrollHeight;
+    textarea.style.height = `${Math.min(scrollHeight, 160)}px`;
+  }, [input]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
 
   // Reset QA state when articleId changes
   useEffect(() => {
@@ -67,6 +85,10 @@ export function QAChat({ articleId, model }: QAChatProps) {
       question,
       webSearch,
     });
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   };
 
   return (
@@ -166,28 +188,31 @@ export function QAChat({ articleId, model }: QAChatProps) {
             {webSearch ? '联网搜索已开启' : '联网搜索'}
           </button>
         </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-          className="flex items-center gap-2"
-        >
-          <Input
+        <div className="flex items-end gap-2">
+          <textarea
+            ref={textareaRef}
+            rows={1}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder={webSearch ? "通过搜索联网回答..." : "向 AI 提问..."}
             disabled={isStreaming}
-            className="flex-1 text-sm"
+            className={cn(
+              "flex-1 min-h-[36px] max-h-[160px] resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50 overflow-y-auto",
+              "scrollbar-thin"
+            )}
+            style={{ height: 'auto' }}
           />
           <Button
-            type="submit"
+            type="button"
             size="icon"
+            onClick={handleSend}
             disabled={!input.trim() || isStreaming}
+            className="h-9 w-9 shrink-0"
           >
             <Send className="h-4 w-4" />
           </Button>
-        </form>
+        </div>
       </div>
     </div>
   );
