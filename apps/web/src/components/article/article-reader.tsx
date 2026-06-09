@@ -692,6 +692,7 @@ export function ArticleReader() {
   };
 
 
+  const hasContent = readerTab === 'summary' || readerTab === 'entities' ? !!displayedSummary : !!displayedMindmap;
   const isCurrentStreaming = readerTab === 'summary' || readerTab === 'entities' ? isSummaryStreaming : isMindmapStreaming;
   const currentContent = readerTab === 'summary' 
     ? displayedSummary 
@@ -1018,61 +1019,33 @@ export function ArticleReader() {
         ) : (
           /* AI Summary / Mindmap / Entities Tab */
           <div className="my-4">
-            {readerTab === 'entities' && !entitiesTriggered && !isSummaryStreaming ? (
-              /* References & Entities Manual Trigger Placeholder */
-              <div className="flex flex-col items-center justify-center p-10 border border-dashed border-border rounded-2xl bg-muted/10 my-8">
-                <BookOpen className="h-12 w-12 text-primary/60 mb-4 stroke-[1.5]" />
-                {displayedSummary ? (
-                  <>
-                    <h3 className="text-sm font-semibold mb-1 text-foreground">
-                      提取节目参考与实体
-                    </h3>
-                    <p className="text-xs text-muted-foreground text-center max-w-sm mb-6 leading-relaxed">
-                      本期节目的 AI 总结已生成。点击下方按钮，智能提炼并展现节目中提到的所有参考资料与知识实体。
-                    </p>
-                    <Button size="sm" onClick={() => setEntitiesTriggered(true)} className="text-xs h-8 shadow-sm gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      提取参考与实体
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-sm font-semibold mb-1 text-foreground">
-                      暂无 AI 参考与实体
-                    </h3>
-                    <p className="text-xs text-muted-foreground text-center max-w-sm mb-6 leading-relaxed">
-                      尚未为本篇内容生成 AI 总结。点击下方按钮开始生成总结并提炼其中的参考与知识实体。
-                    </p>
-                    
-                    <div className="flex items-center gap-3 w-full max-w-md justify-center select-none">
-                      <Button size="sm" onClick={() => {
-                        handleGenerate('summary');
-                        setEntitiesTriggered(true);
-                      }} className="text-xs h-8 shadow-sm">
-                        <Play className="h-3.5 w-3.5 mr-1" />
-                        开始生成
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : !currentContent && !isCurrentStreaming ? (
-              /* Generation Placeholder for Summary / Mindmap */
+            {!hasContent && !isCurrentStreaming ? (
+              /* Generation Placeholder */
               <div className="flex flex-col items-center justify-center p-10 border border-dashed border-border rounded-2xl bg-muted/10 my-8">
                 {readerTab === 'summary' ? (
                   <Sparkles className="h-12 w-12 text-primary/60 mb-4 stroke-[1.5] animate-pulse" />
+                ) : readerTab === 'entities' ? (
+                  <BookOpen className="h-12 w-12 text-primary/60 mb-4 stroke-[1.5] animate-pulse" />
                 ) : (
                   <Network className="h-12 w-12 text-primary/60 mb-4 stroke-[1.5] animate-pulse" />
                 )}
                 <h3 className="text-sm font-semibold mb-1 text-foreground">
-                  暂无 AI {readerTab === 'summary' ? '总结' : '导图'}
+                  暂无 AI {readerTab === 'summary' ? '总结' : readerTab === 'entities' ? '参考与实体' : '导图'}
                 </h3>
                 <p className="text-xs text-muted-foreground text-center max-w-sm mb-6 leading-relaxed">
-                  尚未为本篇内容生成 AI {readerTab === 'summary' ? '总结和深度知识要点' : '结构化思维脑图'}。点击下方按钮开始生成。
+                  {readerTab === 'summary' 
+                    ? '尚未为本篇内容生成 AI 总结和深度知识要点。点击下方按钮开始生成。' 
+                    : readerTab === 'entities'
+                      ? '尚未为本篇内容生成 AI 总结。点击下方按钮开始生成总结并提炼其中的参考与知识实体。'
+                      : '尚未为本篇内容生成 AI 结构化思维脑图。点击下方按钮开始生成。'}
                 </p>
                 
                 <div className="flex items-center gap-3 w-full max-w-md justify-center select-none">
-                  <Button size="sm" onClick={() => handleGenerate(readerTab as 'summary' | 'mindmap')} className="text-xs h-8 shadow-sm">
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleGenerate(readerTab === 'entities' ? 'summary' : readerTab as 'summary' | 'mindmap')} 
+                    className="text-xs h-8 shadow-sm"
+                  >
                     <Play className="h-3.5 w-3.5 mr-1" />
                     开始生成
                   </Button>
