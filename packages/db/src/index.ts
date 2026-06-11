@@ -16,6 +16,12 @@ function getDbPath(): string {
 }
 
 function getDefaultDataDir(): string {
+  const legacyProjectDataDir = join(process.cwd(), 'data');
+  const legacyProjectDbPath = join(legacyProjectDataDir, 'knowflow.db');
+  if (existsSync(legacyProjectDbPath)) {
+    return legacyProjectDataDir;
+  }
+
   const appName = 'KnowFlow';
   const currentPlatform = platform();
 

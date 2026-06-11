@@ -75,6 +75,8 @@ By default, KnowFlow stores data in a platform-specific user data directory:
 - macOS: `~/Library/Application Support/KnowFlow`
 - Linux: `~/.local/share/knowflow`
 
+If an existing project-local database is found at `data/knowflow.db`, KnowFlow keeps using that directory for compatibility with earlier development builds.
+
 Override this with:
 
 ```bash
