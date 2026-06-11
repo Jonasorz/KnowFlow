@@ -68,10 +68,11 @@ Override this with:
 KNOWFLOW_DATA_DIR=/path/to/data pnpm dev
 ```
 
-## Runtime URLs
+## Runtime URL
 
-- Web app: http://localhost:5173
-- API server: http://localhost:3001
+Open http://localhost:5173.
+
+The API server runs locally behind the web app and listens on `http://localhost:3001` by default. You normally do not need to open it directly unless you are developing or debugging the API.
 
 ## Optional Environment Variables
 
