@@ -12,6 +12,7 @@ This project follows Semantic Versioning where practical:
 
 ### Added
 
+- Docker Compose support for one-command local startup with persistent SQLite data under `./data`.
 - Open-source readiness documentation, including installation, security, third-party services, and contribution guidelines.
 - Cross-platform local start workflow with configurable `PORT` and `WEB_PORT`.
 - Dependency license checking scripts.

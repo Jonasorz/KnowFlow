@@ -40,6 +40,18 @@ See `docs/installation.md` for macOS, Linux, and Windows notes.
 
 ## Getting Started
 
+The easiest way to run KnowFlow is Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Then open http://localhost:5173.
+
+Local data is stored in `./data` by default when running with Docker Compose.
+
+For source development:
+
 ```bash
 pnpm install
 pnpm dev

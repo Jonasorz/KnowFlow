@@ -7,6 +7,7 @@ dist/
 *.tsbuildinfo
 
 # Database
+data/
 *.db
 *.db-journal
 *.db-wal

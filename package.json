@@ -8,6 +8,7 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "start": "turbo start",
+    "start:docker": "turbo start:docker",
     "lint": "turbo lint",
     "licenses:check": "pnpm -r --if-present licenses:check",
     "licenses:report": "pnpm -r --if-present licenses:report",

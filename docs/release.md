@@ -39,6 +39,14 @@ Before tagging a release:
    pnpm licenses:check
    ```
 
+   If Docker is available locally, also run:
+
+   ```bash
+   docker compose up --build
+   ```
+
+   Then verify http://localhost:5173/api/health returns a successful response.
+
 3. Review `CHANGELOG.md` and move relevant `Unreleased` entries under the new version.
 4. Check that no local data or secrets are tracked:
 

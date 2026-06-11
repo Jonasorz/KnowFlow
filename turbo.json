@@ -23,6 +23,10 @@
       "cache": false,
       "persistent": true
     },
+    "start:docker": {
+      "cache": false,
+      "persistent": true
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]

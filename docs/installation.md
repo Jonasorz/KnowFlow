@@ -1,6 +1,40 @@
 # Installation
 
-This guide covers local installation on macOS, Linux, and Windows.
+This guide covers Docker Compose and local installation on macOS, Linux, and Windows.
+
+## Docker Compose
+
+Docker Compose is the easiest way to run KnowFlow without installing Node.js, pnpm, build tools, or ffmpeg on your host machine.
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost:5173.
+
+Docker Compose stores local SQLite data in `./data`:
+
+```text
+data/knowflow.db
+```
+
+Stop the app with:
+
+```bash
+docker compose down
+```
+
+To run in the background:
+
+```bash
+docker compose up --build -d
+```
+
+View logs with:
+
+```bash
+docker compose logs -f
+```
 
 ## Requirements
 

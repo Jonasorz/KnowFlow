@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "start": "vite preview --host 127.0.0.1",
+    "start:docker": "vite preview --host 0.0.0.0",
     "preview": "vite preview --host 127.0.0.1",
     "licenses:check": "license-checker-rseidelsohn --production --summary --excludePrivatePackages",
     "licenses:report": "license-checker-rseidelsohn --production --excludePrivatePackages --out THIRD_PARTY_LICENSES.json"

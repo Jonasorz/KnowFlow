@@ -1,0 +1,17 @@
+.git
+.github
+.turbo
+node_modules
+dist
+apps/*/dist
+packages/*/dist
+data
+scratch
+*.db
+*.db-wal
+*.db-shm
+*.log
+*.tsbuildinfo
+.env
+.DS_Store
+THIRD_PARTY_LICENSES.json
