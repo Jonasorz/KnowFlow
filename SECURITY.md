@@ -25,6 +25,7 @@ Include:
 - API keys saved in Settings are stored in the local SQLite database.
 - AI features send selected article/transcript content to the configured AI provider.
 - Podcast transcription sends audio to the configured transcription provider.
+- Podcast audio, show notes, transcripts, and summaries should be treated as creator/publisher-owned content. KnowFlow is intended for personal local use, not redistribution.
 - Temporary public transcription upload fallbacks are disabled by default.
 - There is no built-in authentication or user account system.
 

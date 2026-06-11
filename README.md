@@ -8,7 +8,7 @@ It aggregates articles, tweets, podcast episodes, transcripts, and AI-generated 
 
 - WeChat official account article subscriptions via Dajiala API
 - X/Twitter user subscriptions via twitterapi.io
-- Podcast search via Apple iTunes Search API and RSS feeds
+- Podcast discovery via Apple iTunes Search API, with episode metadata and audio links fetched from podcast RSS feeds
 - Local podcast audio playback
 - Podcast transcription through DashScope or OpenAI-compatible Whisper APIs
 - AI summaries, Q&A, and mind maps through DeepSeek, Moonshot, or OpenRouter
@@ -92,6 +92,7 @@ Important behavior to understand:
 
 - AI summary, Q&A, and mind map features send article or transcript content to the model provider you configure.
 - Podcast transcription may download audio locally and send audio to the transcription provider you configure.
+- Podcast content remains owned by its creators or publishers. KnowFlow is intended for personal local aggregation and playback, not redistribution of audio, transcripts, or full show notes.
 - This project does not currently include user accounts, access control, or production hardening.
 - Do not expose the API server directly to the public internet without adding authentication, stricter CORS settings, rate limits, and deployment hardening.
 
