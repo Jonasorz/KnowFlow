@@ -32,7 +32,7 @@ Video sources such as YouTube and Bilibili are planned but not implemented yet.
 - Node.js 20 or newer
 - pnpm 9 or newer
 
-KnowFlow includes a bundled `ffmpeg-static` dependency for podcast transcription compression. If that binary is unavailable on your platform, the app falls back to a system `ffmpeg` binary.
+Podcast transcription compression requires `ffmpeg` to be available on `PATH`, or configured through `FFMPEG_PATH`.
 
 On Windows, if `better-sqlite3` cannot install from a prebuilt binary, install Visual Studio Build Tools and retry `pnpm install`.
 
@@ -78,6 +78,14 @@ Common API keys configured in the app:
 - DashScope API key for transcription
 - Tavily API key for optional web search
 
+## Third-party Services
+
+KnowFlow integrates with user-configured third-party services such as Dajiala, twitterapi.io, Apple iTunes Search API, podcast RSS feeds, DeepSeek, Moonshot, OpenRouter, DashScope, and Tavily.
+
+Users are responsible for obtaining their own API keys and complying with each provider's terms. Mentioning these services does not imply endorsement, sponsorship, or official partnership.
+
+See `docs/third-party-services.md` for details.
+
 ## Data Storage
 
 KnowFlow stores local data in SQLite. API keys saved in the Settings page are stored in that local database.
@@ -109,6 +117,8 @@ pnpm dev       # Run all dev servers through Turbo
 pnpm build     # Build all packages/apps
 pnpm start     # Run the built web preview and local API server
 pnpm lint      # Placeholder Turbo lint task
+pnpm licenses:check
+pnpm licenses:report
 pnpm db:generate
 pnpm db:migrate
 ```

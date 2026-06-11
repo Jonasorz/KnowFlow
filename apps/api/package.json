@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -b",
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "licenses:check": "license-checker-rseidelsohn --production --summary --excludePrivatePackages",
+    "licenses:report": "license-checker-rseidelsohn --production --excludePrivatePackages --out THIRD_PARTY_LICENSES.json"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
@@ -15,7 +17,6 @@
     "@knowflow/shared": "workspace:*",
     "ai": "^4.3.16",
     "drizzle-orm": "^0.39.3",
-    "ffmpeg-static": "^5.3.0",
     "hono": "^4.7.7",
     "undici": "^8.3.0",
     "uuid": "^11.1.0"

@@ -6,6 +6,7 @@ This guide covers local installation on macOS, Linux, and Windows.
 
 - Node.js 20 LTS or newer
 - pnpm 9 or newer
+- ffmpeg for podcast transcription compression
 
 Enable pnpm with Corepack:
 
@@ -52,6 +53,12 @@ sudo apt-get update
 sudo apt-get install -y build-essential python3
 ```
 
+For podcast transcription compression, install ffmpeg:
+
+```bash
+sudo apt-get install -y ffmpeg
+```
+
 ## Windows
 
 Use PowerShell.
@@ -66,6 +73,8 @@ pnpm dev
 Open http://localhost:5173.
 
 If `better-sqlite3` cannot install from a prebuilt binary, install Visual Studio Build Tools with the C++ build tools workload, then rerun `pnpm install`.
+
+For podcast transcription compression, install ffmpeg and make sure `ffmpeg.exe` is available on `PATH`, or set `FFMPEG_PATH`.
 
 ## Local Data Directory
 
@@ -105,6 +114,7 @@ See `.env.example` for:
 - `HOST`
 - `WEB_PORT`
 - `KNOWFLOW_API_URL`
+- `FFMPEG_PATH`
 - `KNOWFLOW_CORS_ORIGINS`
 - `KNOWFLOW_DATA_DIR`
 - `KNOWFLOW_DEBUG`
