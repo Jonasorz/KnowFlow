@@ -2,6 +2,7 @@ import { appendFileSync, existsSync, promises as fs } from 'fs';
 import { join } from 'path';
 import { spawn } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
+import ffmpegStatic from 'ffmpeg-static';
 
 function runCommand(command: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -401,7 +402,7 @@ async function downloadAndCompressAudio(
     // Compress using ffmpeg
     logDebug(`[Compressor] Compressing audio with ffmpeg to 16kbps mono...`);
     try {
-      await runCommand('ffmpeg', [
+      await runCommand(ffmpegStatic || 'ffmpeg', [
         '-y',
         '-i',
         originalFile,

@@ -31,9 +31,12 @@ Video sources such as YouTube and Bilibili are planned but not implemented yet.
 
 - Node.js 20 or newer
 - pnpm 9 or newer
-- ffmpeg, required only for podcast audio transcription compression
+
+KnowFlow includes a bundled `ffmpeg-static` dependency for podcast transcription compression. If that binary is unavailable on your platform, the app falls back to a system `ffmpeg` binary.
 
 On Windows, if `better-sqlite3` cannot install from a prebuilt binary, install Visual Studio Build Tools and retry `pnpm install`.
+
+See `docs/installation.md` for macOS, Linux, and Windows notes.
 
 ## Getting Started
 
@@ -85,6 +88,12 @@ Important behavior to understand:
 - Podcast transcription may download audio locally and send audio to the transcription provider you configure.
 - This project does not currently include user accounts, access control, or production hardening.
 - Do not expose the API server directly to the public internet without adding authentication, stricter CORS settings, rate limits, and deployment hardening.
+
+See `SECURITY.md` for the current security policy.
+
+## Contributing
+
+See `CONTRIBUTING.md` for development setup and contribution guidelines.
 
 ## Development Scripts
 
