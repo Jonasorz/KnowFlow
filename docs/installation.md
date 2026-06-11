@@ -23,6 +23,13 @@ pnpm dev
 
 Open http://localhost:5173.
 
+For a built local run, use:
+
+```bash
+pnpm build
+pnpm start
+```
+
 ## Linux
 
 ```bash
@@ -72,13 +79,14 @@ KNOWFLOW_DATA_DIR=/path/to/data pnpm dev
 
 Open http://localhost:5173.
 
-The API server runs locally behind the web app and listens on `http://localhost:3001` by default. You normally do not need to open it directly unless you are developing or debugging the API.
+The API server runs locally behind the web app and binds to `127.0.0.1:3001` by default. You normally do not need to open it directly unless you are developing or debugging the API.
 
 ## Optional Environment Variables
 
 See `.env.example` for:
 
 - `PORT`
+- `HOST`
 - `KNOWFLOW_CORS_ORIGINS`
 - `KNOWFLOW_DATA_DIR`
 - `KNOWFLOW_DEBUG`

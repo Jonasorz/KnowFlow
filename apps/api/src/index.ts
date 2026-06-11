@@ -94,20 +94,34 @@ app.route('/api/settings', settingsRoutes);
 // Start server
 // ============================================================
 const PORT = parseInt(process.env.PORT || '3001', 10);
+const HOST = process.env.HOST || '127.0.0.1';
 
 async function main() {
   // Initialize database (creates tables if they don't exist)
   await initializeDatabase();
 
-  serve(
+  const server = serve(
     {
       fetch: app.fetch,
       port: PORT,
+      hostname: HOST,
     },
     (info) => {
-      console.log(`🚀 KnowFlow API server running at http://localhost:${info.port}`);
+      console.log(`🚀 KnowFlow API server running at http://${info.address}:${info.port}`);
     }
   );
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `KnowFlow API could not start because ${HOST}:${PORT} is already in use. ` +
+        `Stop the existing process or set a different PORT.`
+      );
+    } else {
+      console.error('KnowFlow API server error:', err);
+    }
+    process.exit(1);
+  });
 }
 
 main().catch((err) => {

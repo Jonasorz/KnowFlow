@@ -49,6 +49,13 @@ Then open http://localhost:5173.
 
 The API server runs locally behind the web app. In development, the Vite dev server proxies `/api` requests to the local API server.
 
+For a built local run:
+
+```bash
+pnpm build
+pnpm start
+```
+
 ## Configuration
 
 Most user-facing configuration is stored through the Settings page inside the app.
@@ -97,12 +104,13 @@ See `CONTRIBUTING.md` for development setup and contribution guidelines.
 ```bash
 pnpm dev       # Run all dev servers through Turbo
 pnpm build     # Build all packages/apps
+pnpm start     # Run the built web preview and local API server
 pnpm lint      # Placeholder Turbo lint task
 pnpm db:generate
 pnpm db:migrate
 ```
 
-The local API server listens on `http://localhost:3001` by default. You normally do not need to open it directly unless you are developing or debugging the API.
+The local API server binds to `127.0.0.1:3001` by default. You normally do not need to open it directly unless you are developing or debugging the API.
 
 ## Repository Hygiene
 
