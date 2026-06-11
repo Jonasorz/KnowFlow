@@ -10,6 +10,10 @@ This project follows Semantic Versioning where practical:
 
 ## Unreleased
 
+## 0.1.0 - 2026-06-11
+
+Initial public release.
+
 ### Added
 
 - Docker Compose support for one-command local startup with persistent SQLite data under `./data`.
@@ -28,10 +32,6 @@ This project follows Semantic Versioning where practical:
 - External article/transcript HTML rendering is sanitized with DOMPurify.
 - Debug logs are disabled by default.
 - Temporary public transcription upload fallbacks are disabled by default.
-
-## 0.1.0 - TBD
-
-Initial public release candidate.
 
 ### Included
 
