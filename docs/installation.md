@@ -7,7 +7,7 @@ This guide covers Docker Compose and local installation on macOS, Linux, and Win
 Docker Compose is the easiest way to run KnowFlow without installing Node.js, pnpm, build tools, or ffmpeg on your host machine.
 
 ```bash
-docker compose up --build
+docker compose up -d
 ```
 
 Open http://localhost:5173.
@@ -15,7 +15,7 @@ Open http://localhost:5173.
 If port `5173` is already in use:
 
 ```bash
-WEB_PORT=5180 docker compose up --build
+WEB_PORT=5180 docker compose up -d
 ```
 
 Then open http://localhost:5180.
@@ -35,13 +35,19 @@ docker compose down
 To run in the background:
 
 ```bash
-docker compose up --build -d
+docker compose up -d
 ```
 
 View logs with:
 
 ```bash
 docker compose logs -f
+```
+
+To build the Docker image locally instead of using the prebuilt GHCR image:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
 ## Requirements

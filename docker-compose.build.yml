@@ -1,0 +1,5 @@
+services:
+  knowflow:
+    build:
+      context: .
+    image: knowflow-knowflow:local

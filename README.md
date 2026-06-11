@@ -43,7 +43,7 @@ See `docs/installation.md` for macOS, Linux, and Windows notes.
 The easiest way to run KnowFlow is Docker Compose:
 
 ```bash
-docker compose up --build
+docker compose up -d
 ```
 
 Then open http://localhost:5173.
@@ -53,7 +53,7 @@ Local data is stored in `./data` by default when running with Docker Compose.
 If port `5173` is already in use:
 
 ```bash
-WEB_PORT=5180 docker compose up --build
+WEB_PORT=5180 docker compose up -d
 ```
 
 For source development:
@@ -74,6 +74,12 @@ For a built local run:
 ```bash
 pnpm build
 pnpm start
+```
+
+To build the Docker image locally instead of using the prebuilt GHCR image:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
 ## Configuration

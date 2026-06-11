@@ -1,7 +1,6 @@
 services:
   knowflow:
-    build:
-      context: .
+    image: ghcr.io/jonasorz/knowflow:latest
     ports:
       - "${WEB_PORT:-5173}:${WEB_PORT:-5173}"
     environment:

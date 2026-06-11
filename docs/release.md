@@ -39,13 +39,19 @@ Before tagging a release:
    pnpm licenses:check
    ```
 
-   If Docker is available locally, also run:
+   If Docker is available locally, also run the default prebuilt image path:
 
    ```bash
-   docker compose up --build
+   docker compose up -d
    ```
 
    Then verify http://localhost:5173/api/health returns a successful response.
+
+   To test a local image build:
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
+   ```
 
 3. Review `CHANGELOG.md` and move relevant `Unreleased` entries under the new version.
 4. Check that no local data or secrets are tracked:
