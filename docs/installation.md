@@ -23,6 +23,12 @@ pnpm dev
 
 Open http://localhost:5173.
 
+If the default web port is already in use:
+
+```bash
+WEB_PORT=5180 pnpm dev
+```
+
 For a built local run, use:
 
 ```bash
@@ -81,12 +87,22 @@ Open http://localhost:5173.
 
 The API server runs locally behind the web app and binds to `127.0.0.1:3001` by default. You normally do not need to open it directly unless you are developing or debugging the API.
 
+If either default port is already in use:
+
+```bash
+PORT=3011 WEB_PORT=5180 pnpm dev
+```
+
+Then open http://localhost:5180.
+
 ## Optional Environment Variables
 
 See `.env.example` for:
 
 - `PORT`
 - `HOST`
+- `WEB_PORT`
+- `KNOWFLOW_API_URL`
 - `KNOWFLOW_CORS_ORIGINS`
 - `KNOWFLOW_DATA_DIR`
 - `KNOWFLOW_DEBUG`

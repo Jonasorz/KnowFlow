@@ -1,5 +1,19 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "PORT",
+    "HOST",
+    "WEB_PORT",
+    "KNOWFLOW_API_URL",
+    "KNOWFLOW_CORS_ORIGINS",
+    "KNOWFLOW_DATA_DIR",
+    "KNOWFLOW_DEBUG",
+    "KNOWFLOW_ALLOW_PUBLIC_TRANSCRIPTION_UPLOADS",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "http_proxy",
+    "https_proxy"
+  ],
   "tasks": {
     "dev": {
       "cache": false,

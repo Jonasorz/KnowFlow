@@ -49,6 +49,8 @@ Then open http://localhost:5173.
 
 The API server runs locally behind the web app. In development, the Vite dev server proxies `/api` requests to the local API server.
 
+The default ports are `5173` for the web app and `3001` for the local API. They can be changed with `WEB_PORT` and `PORT` if those ports are already in use.
+
 For a built local run:
 
 ```bash
@@ -110,7 +112,7 @@ pnpm db:generate
 pnpm db:migrate
 ```
 
-The local API server binds to `127.0.0.1:3001` by default. You normally do not need to open it directly unless you are developing or debugging the API.
+The local API server binds to `127.0.0.1:3001` by default. The web port and API port are configurable through `WEB_PORT` and `PORT`. You normally do not need to open the API directly unless you are developing or debugging it.
 
 ## Repository Hygiene
 

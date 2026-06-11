@@ -23,7 +23,9 @@ if (proxyUrl) {
 }
 
 const app = new Hono();
-const corsOrigins = (process.env.KNOWFLOW_CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
+const WEB_PORT = process.env.WEB_PORT || '5173';
+const defaultCorsOrigins = `http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}`;
+const corsOrigins = (process.env.KNOWFLOW_CORS_ORIGINS || defaultCorsOrigins)
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
