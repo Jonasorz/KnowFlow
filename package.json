@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "KnowFlow — Multi-source content aggregation reader",
+  "license": "MIT",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",

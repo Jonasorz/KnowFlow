@@ -1,12 +1,31 @@
 import { appendFileSync, existsSync, promises as fs } from 'fs';
 import { join } from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 
-const execAsync = promisify(exec);
+function runCommand(command: string, args: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stderr = '';
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(`${command} exited with code ${code}: ${stderr.trim()}`));
+    });
+  });
+}
 
 function logDebug(message: string) {
+  if (process.env.KNOWFLOW_DEBUG !== 'true') return;
+
   try {
     const logPath = join(process.cwd(), 'debug_podcast.log');
     appendFileSync(logPath, `[${new Date().toISOString()}] ${message}\n`, 'utf8');
@@ -382,7 +401,20 @@ async function downloadAndCompressAudio(
     // Compress using ffmpeg
     logDebug(`[Compressor] Compressing audio with ffmpeg to 16kbps mono...`);
     try {
-      await execAsync(`ffmpeg -y -i "${originalFile}" -acodec libmp3lame -ab 16k -ar 16000 -ac 1 "${compressedFile}"`);
+      await runCommand('ffmpeg', [
+        '-y',
+        '-i',
+        originalFile,
+        '-acodec',
+        'libmp3lame',
+        '-ab',
+        '16k',
+        '-ar',
+        '16000',
+        '-ac',
+        '1',
+        compressedFile,
+      ]);
       const compressedStats = await fs.stat(compressedFile);
       const compressedSize = compressedStats.size;
       logDebug(`[Compressor] Compression successful! Compressed size: ${(compressedSize / (1024 * 1024)).toFixed(2)} MB`);
@@ -477,7 +509,14 @@ async function transcribeWithDashScope(
     isOssUpload = true;
     logDebug(`[DashScope] File uploaded successfully to official OSS. OSS URL: ${fileUrl}`);
   } catch (err) {
-    logDebug(`[DashScope] Official OSS upload failed: ${err instanceof Error ? err.message : String(err)}. Falling back to temporary public hosts pipeline...`);
+    logDebug(`[DashScope] Official OSS upload failed: ${err instanceof Error ? err.message : String(err)}. Checking whether public temporary upload fallbacks are enabled...`);
+
+    if (process.env.KNOWFLOW_ALLOW_PUBLIC_TRANSCRIPTION_UPLOADS !== 'true') {
+      throw new Error(
+        'DashScope official upload failed. Temporary public transcription upload fallbacks are disabled by default. ' +
+        'Set KNOWFLOW_ALLOW_PUBLIC_TRANSCRIPTION_UPLOADS=true only if you understand that audio files may be uploaded to third-party public temporary file hosts.'
+      );
+    }
 
     // Try fallback temporary public hosting services
     const formData = new FormData();

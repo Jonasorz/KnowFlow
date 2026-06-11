@@ -586,19 +586,21 @@ ${transcriptSample}
       Object.assign(mapping, aiMapping);
  
       // Log the AI response and mappings
-      const logPath = join(process.cwd(), 'debug_identify.log');
-      try {
-        const logMsg = `[Debug Identify Speakers]\n` +
-          `Article ID: ${id}\n` +
-          `Article Title: ${article.title}\n` +
-          `Article Author: ${article.author}\n` +
-          `All Speakers in Transcript: ${JSON.stringify(speakers)}\n` +
-          `Speakers to Identify: ${JSON.stringify(speakersToIdentify)}\n` +
-          `AI Text Response: ${text}\n` +
-          `Final Mapping Table: ${JSON.stringify(mapping)}\n\n`;
-        appendFileSync(logPath, logMsg, 'utf8');
-      } catch (e) {
-        console.error('Failed to write debug log:', e);
+      if (process.env.KNOWFLOW_DEBUG === 'true') {
+        const logPath = join(process.cwd(), 'debug_identify.log');
+        try {
+          const logMsg = `[Debug Identify Speakers]\n` +
+            `Article ID: ${id}\n` +
+            `Article Title: ${article.title}\n` +
+            `Article Author: ${article.author}\n` +
+            `All Speakers in Transcript: ${JSON.stringify(speakers)}\n` +
+            `Speakers to Identify: ${JSON.stringify(speakersToIdentify)}\n` +
+            `AI Text Response: ${text}\n` +
+            `Final Mapping Table: ${JSON.stringify(mapping)}\n\n`;
+          appendFileSync(logPath, logMsg, 'utf8');
+        } catch (e) {
+          console.error('Failed to write debug log:', e);
+        }
       }
     }
  
@@ -710,4 +712,3 @@ articlesRoutes.post('/:id/apply-speaker-mapping', async (c) => {
       : '发言人姓名未发生变更。',
   });
 });
-

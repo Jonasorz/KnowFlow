@@ -5,6 +5,8 @@ import { appendFileSync } from 'fs';
 import { join } from 'path';
 
 function logDebug(message: string) {
+  if (process.env.KNOWFLOW_DEBUG !== 'true') return;
+
   try {
     const logPath = join(process.cwd(), 'debug_test_key.log');
     appendFileSync(logPath, `[${new Date().toISOString()}] ${message}\n`, 'utf8');

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { useArticle, useToggleStar, useTranscribeArticle, useIdentifySpeakers, useApplySpeakerMapping } from '@/hooks/use-articles';
 import { useAppStore } from '@/stores/app-store';
 import { useAudioStore } from '@/stores/audio-store';
@@ -141,13 +142,35 @@ function cleanArticleHtml(html: string): string {
   // Remove link tags pointing to stylesheets
   clean = clean.replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi, '');
 
-  return clean.trim();
+  return sanitizeRichHtml(clean).trim();
 }
 
 function cleanTranscriptHtml(html: string): string {
   if (!html) return '';
   // Remove the text "点击跳转播放" from the transcript
-  return html.replace(/<span class="text-\[9px\][^>]*>点击跳转播放<\/span>/gi, '');
+  return sanitizeRichHtml(html.replace(/<span class="text-\[9px\][^>]*>点击跳转播放<\/span>/gi, ''));
+}
+
+function sanitizeRichHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    FORBID_TAGS: [
+      'script',
+      'style',
+      'iframe',
+      'object',
+      'embed',
+      'form',
+      'input',
+      'button',
+      'textarea',
+      'select',
+      'meta',
+      'base',
+      'svg',
+      'math',
+    ],
+    FORBID_ATTR: ['style', 'srcdoc'],
+  });
 }
 
 function resolveOriginalUrl(url: string | null | undefined): string {
