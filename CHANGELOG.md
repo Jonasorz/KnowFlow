@@ -1,0 +1,42 @@
+# Changelog
+
+All notable changes to KnowFlow will be documented in this file.
+
+This project follows Semantic Versioning where practical:
+
+- `MAJOR` for incompatible changes or data migrations that require manual action
+- `MINOR` for new user-facing features
+- `PATCH` for bug fixes and documentation-only release notes
+
+## Unreleased
+
+### Added
+
+- Open-source readiness documentation, including installation, security, third-party services, and contribution guidelines.
+- Cross-platform local start workflow with configurable `PORT` and `WEB_PORT`.
+- Dependency license checking scripts.
+
+### Changed
+
+- The web app is documented as the primary local entrypoint.
+- Existing project-local databases are preserved for compatibility with earlier development builds.
+- Podcast source documentation now distinguishes Apple iTunes Search API, RSS feeds, and publisher/player links.
+
+### Security
+
+- External article/transcript HTML rendering is sanitized with DOMPurify.
+- Debug logs are disabled by default.
+- Temporary public transcription upload fallbacks are disabled by default.
+
+## 0.1.0 - TBD
+
+Initial public release candidate.
+
+### Included
+
+- WeChat official account subscriptions through user-configured Dajiala API.
+- X/Twitter subscriptions through user-configured twitterapi.io API.
+- Podcast discovery through Apple iTunes Search API and RSS feeds.
+- Local podcast playback.
+- AI summaries, Q&A, and mind maps through user-configured AI providers.
+- Optional podcast transcription through user-configured transcription providers.

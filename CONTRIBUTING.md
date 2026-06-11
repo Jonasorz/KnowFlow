@@ -24,6 +24,30 @@ Build before opening a pull request:
 pnpm build
 ```
 
+## Branch And Pull Request Workflow
+
+`main` should remain usable and buildable. Avoid committing experimental work directly to `main`.
+
+For each change:
+
+1. Create a short-lived branch:
+
+   ```bash
+   git checkout -b codex/short-description
+   ```
+
+2. Make focused changes.
+3. Run:
+
+   ```bash
+   pnpm build
+   ```
+
+4. Open a Pull Request into `main`.
+5. Keep the PR description clear about user-visible changes, data/storage changes, and any security or privacy implications.
+
+Maintainers may merge small documentation-only changes directly, but feature work and behavior changes should go through a PR when possible.
+
 ## Project Structure
 
 - `apps/api` - Hono API server
@@ -40,6 +64,7 @@ pnpm build
 - Prefer cross-platform Node APIs over shell-specific commands.
 - Use existing package boundaries before adding new abstractions.
 - Run `pnpm build` before submitting changes.
+- Update `CHANGELOG.md` when a change is user-visible.
 
 ## Security-Sensitive Areas
 
@@ -52,3 +77,7 @@ Please be especially careful with:
 - CORS and deployment settings
 
 If you find a vulnerability, please follow `SECURITY.md` instead of opening a public issue.
+
+## Releases
+
+Release tags are created from `main` after verification. See `docs/release.md` for the release checklist, tag format, and GitHub release note guidance.

@@ -110,6 +110,8 @@ See `SECURITY.md` for the current security policy.
 
 See `CONTRIBUTING.md` for development setup and contribution guidelines.
 
+See `docs/release.md` for release and tag guidance.
+
 ## Development Scripts
 
 ```bash
