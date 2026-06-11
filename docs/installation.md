@@ -12,6 +12,14 @@ docker compose up --build
 
 Open http://localhost:5173.
 
+If port `5173` is already in use:
+
+```bash
+WEB_PORT=5180 docker compose up --build
+```
+
+Then open http://localhost:5180.
+
 Docker Compose stores local SQLite data in `./data`:
 
 ```text

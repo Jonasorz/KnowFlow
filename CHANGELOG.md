@@ -10,6 +10,10 @@ This project follows Semantic Versioning where practical:
 
 ## Unreleased
 
+### Changed
+
+- Docker Compose web port can be changed with `WEB_PORT`, for example `WEB_PORT=5180 docker compose up --build`.
+
 ## 0.1.0 - 2026-06-11
 
 Initial public release.

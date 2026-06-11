@@ -3,14 +3,14 @@ services:
     build:
       context: .
     ports:
-      - "5173:5173"
+      - "${WEB_PORT:-5173}:${WEB_PORT:-5173}"
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3001
-      WEB_PORT: 5173
+      WEB_PORT: ${WEB_PORT:-5173}
       KNOWFLOW_API_URL: http://127.0.0.1:3001
-      KNOWFLOW_CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      KNOWFLOW_CORS_ORIGINS: http://localhost:${WEB_PORT:-5173},http://127.0.0.1:${WEB_PORT:-5173}
       KNOWFLOW_DATA_DIR: /app/data
       FFMPEG_PATH: /usr/bin/ffmpeg
       KNOWFLOW_DEBUG: "false"
