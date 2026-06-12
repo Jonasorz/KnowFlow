@@ -10,6 +10,8 @@ This project follows Semantic Versioning where practical:
 
 ## Unreleased
 
+## 0.1.1 - 2026-06-12
+
 ### Changed
 
 - Docker Compose now uses the prebuilt `ghcr.io/jonasorz/knowflow:latest` image by default, with `docker-compose.build.yml` reserved for local image builds.
