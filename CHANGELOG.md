@@ -13,6 +13,7 @@ This project follows Semantic Versioning where practical:
 ### Changed
 
 - Docker Compose now uses the prebuilt `ghcr.io/jonasorz/knowflow:latest` image by default, with `docker-compose.build.yml` reserved for local image builds.
+- Published Docker images now target both `linux/amd64` and `linux/arm64`.
 - Docker Compose web port can be changed with `WEB_PORT`, for example `WEB_PORT=5180 docker compose up -d`.
 
 ## 0.1.0 - 2026-06-11
