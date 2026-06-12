@@ -1,5 +1,7 @@
 # KnowFlow
 
+[简体中文](https://github.com/Jonasorz/KnowFlow/blob/main/README.zh-CN.md)
+
 KnowFlow is a local-first multi-source reading and knowledge workflow app.
 
 It aggregates articles, tweets, podcast episodes, transcripts, and AI-generated notes into a browser-based reader. The current app runs as a local web interface with a Node.js API and SQLite database.
@@ -29,24 +31,46 @@ Video sources such as YouTube and Bilibili are planned but not implemented yet.
 
 ## Requirements
 
+For Docker Compose:
+
+- Docker Desktop or Docker Engine with Docker Compose
+
+For source development:
+
 - Node.js 20 or newer
 - pnpm 9 or newer
 
-Podcast transcription compression requires `ffmpeg` to be available on `PATH`, or configured through `FFMPEG_PATH`.
+When running from source, podcast transcription compression requires `ffmpeg` to be available on `PATH`, or configured through `FFMPEG_PATH`.
 
 On Windows, if `better-sqlite3` cannot install from a prebuilt binary, install Visual Studio Build Tools and retry `pnpm install`.
 
-See `docs/installation.md` for macOS, Linux, and Windows notes.
+See the [installation guide](https://github.com/Jonasorz/KnowFlow/blob/main/docs/installation.md) for Docker, macOS, Linux, and Windows notes.
 
 ## Getting Started
 
-The easiest way to run KnowFlow is Docker Compose:
+The easiest way to run KnowFlow is Docker Compose. Clone the repository first so you have the Compose file:
 
 ```bash
+git clone https://github.com/Jonasorz/KnowFlow.git
+cd KnowFlow
 docker compose up -d
 ```
 
 Then open http://localhost:5173.
+
+Docker Compose automatically pulls the prebuilt image:
+
+```bash
+ghcr.io/jonasorz/knowflow:latest
+```
+
+You do not need to run `docker pull` manually. If you only want to pre-download or verify the image, this is optional:
+
+```bash
+docker pull ghcr.io/jonasorz/knowflow:latest
+```
+
+Running `docker pull` only downloads the image. It does not start the app.
 
 Local data is stored in `./data` by default when running with Docker Compose.
 
@@ -55,6 +79,19 @@ If port `5173` is already in use:
 ```bash
 WEB_PORT=5180 docker compose up -d
 ```
+
+Then open http://localhost:5180.
+
+If you do not want to clone the full source code, you can download only the Compose file:
+
+```bash
+mkdir knowflow
+cd knowflow
+curl -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlow/main/docker-compose.yml
+docker compose up -d
+```
+
+For full setup details, see the [installation guide](https://github.com/Jonasorz/KnowFlow/blob/main/docs/installation.md).
 
 For source development:
 
@@ -108,7 +145,7 @@ KnowFlow integrates with user-configured third-party services such as Dajiala, t
 
 Users are responsible for obtaining their own API keys and complying with each provider's terms. Mentioning these services does not imply endorsement, sponsorship, or official partnership.
 
-See `docs/third-party-services.md` for details.
+See [third-party services](https://github.com/Jonasorz/KnowFlow/blob/main/docs/third-party-services.md) for details.
 
 ## Data Storage
 
@@ -128,13 +165,13 @@ Important behavior to understand:
 - This project does not currently include user accounts, access control, or production hardening.
 - Do not expose the API server directly to the public internet without adding authentication, stricter CORS settings, rate limits, and deployment hardening.
 
-See `SECURITY.md` for the current security policy.
+See [SECURITY.md](https://github.com/Jonasorz/KnowFlow/blob/main/SECURITY.md) for the current security policy.
 
 ## Contributing
 
-See `CONTRIBUTING.md` for development setup and contribution guidelines.
+See [CONTRIBUTING.md](https://github.com/Jonasorz/KnowFlow/blob/main/CONTRIBUTING.md) for development setup and contribution guidelines.
 
-See `docs/release.md` for release and tag guidance.
+See [release guidance](https://github.com/Jonasorz/KnowFlow/blob/main/docs/release.md) for release and tag guidance.
 
 ## Development Scripts
 

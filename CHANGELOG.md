@@ -10,6 +10,15 @@ This project follows Semantic Versioning where practical:
 
 ## Unreleased
 
+### Added
+
+- Added a Simplified Chinese README with installation, Docker, configuration, and security notes.
+
+### Changed
+
+- Clarified Docker Compose installation steps, including repository clone, Compose-only setup, optional image pull, and custom web ports.
+- Updated README documentation references to use full GitHub links.
+
 ## 0.1.1 - 2026-06-12
 
 ### Changed

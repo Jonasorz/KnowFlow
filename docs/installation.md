@@ -6,11 +6,46 @@ This guide covers Docker Compose and local installation on macOS, Linux, and Win
 
 Docker Compose is the easiest way to run KnowFlow without installing Node.js, pnpm, build tools, or ffmpeg on your host machine.
 
+### Option A: Clone the repository
+
+This is the recommended path because it gives you the Compose file, docs, and update scripts in one place. Docker Compose will pull the prebuilt GHCR image automatically.
+
 ```bash
+git clone https://github.com/Jonasorz/KnowFlow.git
+cd KnowFlow
 docker compose up -d
 ```
 
 Open http://localhost:5173.
+
+### Option B: Use only the Compose file
+
+If you do not want the source code, create an empty folder and download only `docker-compose.yml`:
+
+```bash
+mkdir knowflow
+cd knowflow
+curl -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlow/main/docker-compose.yml
+docker compose up -d
+```
+
+Open http://localhost:5173.
+
+### Optional: Pull the image first
+
+You do not need to run `docker pull` before `docker compose up -d`. Compose pulls the image automatically. A manual pull is only useful when you want to pre-download or verify the image:
+
+```bash
+docker pull ghcr.io/jonasorz/knowflow:latest
+```
+
+This only downloads the image. It does not start KnowFlow. Start the app with:
+
+```bash
+docker compose up -d
+```
+
+### Change the web port
 
 If port `5173` is already in use:
 
@@ -19,6 +54,13 @@ WEB_PORT=5180 docker compose up -d
 ```
 
 Then open http://localhost:5180.
+
+On Windows PowerShell:
+
+```powershell
+$env:WEB_PORT=5180
+docker compose up -d
+```
 
 Docker Compose stores local SQLite data in `./data`:
 
@@ -50,7 +92,7 @@ To build the Docker image locally instead of using the prebuilt GHCR image:
 docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
-## Requirements
+## Source Requirements
 
 - Node.js 20 LTS or newer
 - pnpm 9 or newer
