@@ -10,6 +10,8 @@ This project follows Semantic Versioning where practical:
 
 ## Unreleased
 
+## 0.1.2 - 2026-06-13
+
 ### Added
 
 - Added a Simplified Chinese README with installation, Docker, configuration, and security notes.
