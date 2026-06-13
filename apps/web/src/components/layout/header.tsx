@@ -16,7 +16,8 @@ import {
   LayoutGrid,
   LayoutList,
   RefreshCw,
-  RefreshCcw,
+  Focus,
+  ListRestart,
   ArrowUpDown,
   Clock,
   Eye,
@@ -198,12 +199,15 @@ export function Header() {
               disabled={syncAll.isPending}
               className="text-primary hover:text-primary hover:bg-primary/10"
             >
-              <RefreshCw
-                className={cn(
-                  'h-4 w-4 transition-transform',
-                  syncAll.isPending && 'animate-spin'
-                )}
-              />
+              <span className="relative flex h-4 w-4 items-center justify-center">
+                <Focus className="h-4 w-4" />
+                <RefreshCw
+                  className={cn(
+                    'absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-background transition-transform',
+                    syncAll.isPending && 'animate-spin'
+                  )}
+                />
+              </span>
             </Button>
           </Tooltip>
         )}
@@ -216,7 +220,7 @@ export function Header() {
             onClick={() => syncAll.mutate(undefined)}
             disabled={syncAll.isPending}
           >
-            <RefreshCcw
+            <ListRestart
               className={cn(
                 'h-4 w-4 transition-transform',
                 syncAll.isPending && !(selectedSourceId || selectedTag) && 'animate-spin'
