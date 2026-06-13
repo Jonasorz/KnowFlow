@@ -10,6 +10,25 @@ This project follows Semantic Versioning where practical:
 
 ## Unreleased
 
+## 0.1.3 - 2026-06-13
+
+### Added
+
+- Added a Settings > About update checker that queries GitHub Releases and displays the latest release notes and link.
+- Added a newspaper article view for editorial-style browsing.
+- Added a summary article view and made it the default article list experience.
+
+### Changed
+
+- Replaced the card/grid article view with summary, newspaper, and list view options.
+- Improved WeChat article card handling by hiding blocked WeChat cover images in list thumbnails.
+- Expanded newspaper view article text density and aligned article view widths.
+
+### Fixed
+
+- Improved WeChat Biz ID extraction for current WeChat article HTML formats.
+- Removed incorrect article count labels from the newspaper view.
+
 ## 0.1.2 - 2026-06-13
 
 ### Added

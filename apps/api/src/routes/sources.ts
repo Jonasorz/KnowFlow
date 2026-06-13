@@ -18,6 +18,16 @@ const { sources, articles } = schema;
 
 export const sourcesRoutes = new Hono();
 
+function firstRegexMatch(text: string, patterns: RegExp[]): string {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+  return '';
+}
+
 // ============================================================
 // POST /search — search for WeChat accounts
 // ============================================================
@@ -186,24 +196,14 @@ sourcesRoutes.get('/wechat/parse-biz', async (c) => {
     const html = await response.text();
     
     // Parse biz
-    let biz = '';
-    const bizPattern = /biz:\s*["']([^"']+)["']/;
-    const match1 = html.match(bizPattern);
-    if (match1 && match1[1]) {
-      biz = match1[1];
-    } else {
-      const varBizPattern = /var\s+biz\s*=\s*["']([^"']+)["']/;
-      const match2 = html.match(varBizPattern);
-      if (match2 && match2[1]) {
-        biz = match2[1];
-      } else {
-        const appuinPattern = /appuin\s*:\s*["']([^"']+)["']/;
-        const match3 = html.match(appuinPattern);
-        if (match3 && match3[1]) {
-          biz = match3[1];
-        }
-      }
-    }
+    let biz = firstRegexMatch(html, [
+      /biz:\s*["']([^"']+)["']/,
+      /var\s+biz\s*=\s*["']([^"']+)["']/,
+      /window\.biz\s*=\s*["']([^"']+)["']/,
+      /appuin\s*:\s*["']([^"']+)["']/,
+      /\bd\.biz\s*=\s*[^;]*?:\s*["']([^"']+)["']/s,
+      /getXmlValue\(["']bizuin\.DATA["']\)\s*\|\|\s*getXmlValue\(["']__biz["']\)\s*:\s*["']([^"']+)["']/s,
+    ]);
 
     // Use fallback if still not found
     biz = biz || fallbackBiz;
@@ -216,38 +216,22 @@ sourcesRoutes.get('/wechat/parse-biz', async (c) => {
     }
 
     // Parse name/nickname
-    let name = '';
-    const nicknamePattern1 = /var\s+nickname\s*=\s*htmlDecode\(["']([^"']+)["']\)/;
-    const matchNick1 = html.match(nicknamePattern1);
-    if (matchNick1 && matchNick1[1]) {
-      name = matchNick1[1];
-    } else {
-      const nicknamePattern2 = /var\s+nickname\s*=\s*["']([^"']+)["']/;
-      const matchNick2 = html.match(nicknamePattern2);
-      if (matchNick2 && matchNick2[1]) {
-        name = matchNick2[1];
-      } else {
-        const profileNicknamePattern = /<strong[^>]*class=["']profile_nickname["'][^>]*>\s*([^<\s]+)\s*<\/strong>/;
-        const matchNick3 = html.match(profileNicknamePattern);
-        if (matchNick3 && matchNick3[1]) {
-          name = matchNick3[1];
-        }
-      }
-    }
+    const name = firstRegexMatch(html, [
+      /var\s+nickname\s*=\s*htmlDecode\(["']([^"']+)["']\)/,
+      /var\s+nickname\s*=\s*["']([^"']+)["']/,
+      /\bd\.nick_name\s*=\s*[^;]*?:\s*["']([^"']+)["']/s,
+      /getXmlValue\(["']nick_name\.DATA["']\)\s*:\s*["']([^"']+)["']/s,
+      /<strong[^>]*class=["']profile_nickname["'][^>]*>\s*([^<\s]+)\s*<\/strong>/,
+    ]);
 
     // Parse avatarUrl
-    let avatarUrl = '';
-    const roundHeadPattern1 = /var\s+round_head_img\s*=\s*["']([^"']+)["']/;
-    const matchAvatar1 = html.match(roundHeadPattern1);
-    if (matchAvatar1 && matchAvatar1[1]) {
-      avatarUrl = matchAvatar1[1];
-    } else {
-      const roundHeadPattern2 = /round_head_img\s*:\s*["']([^"']+)["']/;
-      const matchAvatar2 = html.match(roundHeadPattern2);
-      if (matchAvatar2 && matchAvatar2[1]) {
-        avatarUrl = matchAvatar2[1];
-      }
-    }
+    const avatarUrl = firstRegexMatch(html, [
+      /var\s+round_head_img\s*=\s*["']([^"']+)["']/,
+      /round_head_img\s*:\s*["']([^"']+)["']/,
+      /\bd\.round_head_img\s*=\s*[^;]*?:\s*["']([^"']+)["']/s,
+      /getXmlValue\(["']round_head_img\.DATA["']\)[^:]*:\s*["']([^"']+)["']/s,
+      /\bd\.hd_head_img\s*=\s*[^;]*?:\s*["']([^"']+)["']/s,
+    ]);
 
     return c.json({
       success: true,
@@ -1166,4 +1150,3 @@ sourcesRoutes.post('/bulk-delete', async (c) => {
     );
   }
 });
-

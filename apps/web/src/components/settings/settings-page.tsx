@@ -39,6 +39,140 @@ import {
 } from 'lucide-react';
 import type { AIModel, Settings } from '@knowflow/shared';
 
+interface GitHubRelease {
+  tag_name: string;
+  name?: string;
+  body?: string;
+  html_url: string;
+  published_at?: string;
+  prerelease?: boolean;
+  draft?: boolean;
+}
+
+type UpdateCheckState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; release: GitHubRelease; hasUpdate: boolean }
+  | { status: 'error'; message: string };
+
+function normalizeVersion(version: string): string {
+  return version.trim().replace(/^v/i, '').split('-')[0];
+}
+
+function compareVersions(a: string, b: string): number {
+  const left = normalizeVersion(a).split('.').map((part) => Number.parseInt(part, 10) || 0);
+  const right = normalizeVersion(b).split('.').map((part) => Number.parseInt(part, 10) || 0);
+  const length = Math.max(left.length, right.length);
+
+  for (let i = 0; i < length; i++) {
+    const diff = (left[i] || 0) - (right[i] || 0);
+    if (diff !== 0) return diff > 0 ? 1 : -1;
+  }
+
+  return 0;
+}
+
+function UpdateChecker() {
+  const [state, setState] = useState<UpdateCheckState>({ status: 'idle' });
+
+  const checkForUpdates = async () => {
+    setState({ status: 'loading' });
+
+    try {
+      const response = await fetch('https://api.github.com/repos/Jonasorz/KnowFlow/releases/latest', {
+        headers: {
+          Accept: 'application/vnd.github+json',
+        },
+      });
+
+      if (response.status === 404) {
+        setState({ status: 'error', message: 'GitHub 上暂未找到可用的 release。' });
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`GitHub returned ${response.status}`);
+      }
+
+      const release = (await response.json()) as GitHubRelease;
+      const hasUpdate = compareVersions(release.tag_name, __APP_VERSION__) > 0;
+      setState({ status: 'success', release, hasUpdate });
+    } catch (err) {
+      setState({
+        status: 'error',
+        message: err instanceof Error ? err.message : '检查更新失败，请稍后再试。',
+      });
+    }
+  };
+
+  return (
+    <div className="mt-4 rounded-lg border border-border bg-muted/25 p-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold text-foreground">版本更新</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            当前版本 {__APP_VERSION__}，从 GitHub Releases 检查最新版。
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={checkForUpdates}
+          disabled={state.status === 'loading'}
+          className="h-8 gap-1.5 text-xs"
+        >
+          {state.status === 'loading' ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
+          检测更新
+        </Button>
+      </div>
+
+      {state.status === 'success' && (
+        <div className="mt-3 rounded-md border border-border bg-background p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={state.hasUpdate ? 'success' : 'muted'} className="text-[10px]">
+              {state.hasUpdate ? '发现新版本' : '已是最新版'}
+            </Badge>
+            <span className="text-xs font-semibold">
+              {state.release.name || state.release.tag_name}
+            </span>
+            {state.release.published_at && (
+              <span className="text-[11px] text-muted-foreground">
+                {new Date(state.release.published_at).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-2 max-h-36 overflow-y-auto whitespace-pre-wrap rounded-md bg-muted/35 p-2.5 text-xs leading-relaxed text-muted-foreground">
+            {state.release.body?.trim() || '该 release 没有填写说明。'}
+          </div>
+
+          <div className="mt-3 flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open(state.release.html_url, '_blank', 'noopener,noreferrer')}
+              className="h-7 gap-1.5 text-xs text-primary hover:text-primary"
+            >
+              查看 Release
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {state.status === 'error' && (
+        <div className="mt-3 rounded-md border border-destructive/15 bg-destructive/5 p-2.5 text-xs text-destructive">
+          {state.message}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ApiKeyFieldProps {
   label: string;
   provider: string;
@@ -1356,6 +1490,7 @@ export function SettingsPage() {
                     <ExternalLink className="h-3 w-3 text-muted-foreground" />
                   </Button>
                 </div>
+                <UpdateChecker />
               </div>
             </div>
           </section>

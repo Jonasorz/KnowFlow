@@ -13,8 +13,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Search,
-  LayoutGrid,
   LayoutList,
+  Newspaper,
+  Rows3,
   RefreshCw,
   Focus,
   ListRestart,
@@ -46,6 +47,7 @@ export function Header() {
 
   const { data: sources } = useSources();
   const syncAll = useSyncAllSources();
+  const activeViewMode = viewMode === 'newspaper' || viewMode === 'list' ? viewMode : 'summary';
 
   const getTitle = () => {
     if (selectedSourceId) return 'Source Articles';
@@ -118,30 +120,43 @@ export function Header() {
 
         {/* View Toggle */}
         <div className="flex items-center rounded-lg border border-border p-0.5">
-          <Tooltip content="List view" side="bottom">
+          <Tooltip content="摘要流视图" side="bottom">
+            <button
+              onClick={() => setViewMode('summary')}
+              className={cn(
+                'rounded-md p-1.5 transition-all duration-200',
+                activeViewMode === 'summary'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Rows3 className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content="报纸视图" side="bottom">
+            <button
+              onClick={() => setViewMode('newspaper')}
+              className={cn(
+                'rounded-md p-1.5 transition-all duration-200',
+                activeViewMode === 'newspaper'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Newspaper className="h-4 w-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content="列表视图" side="bottom">
             <button
               onClick={() => setViewMode('list')}
               className={cn(
                 'rounded-md p-1.5 transition-all duration-200',
-                viewMode === 'list'
+                activeViewMode === 'list'
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <LayoutList className="h-4 w-4" />
-            </button>
-          </Tooltip>
-          <Tooltip content="Grid view" side="bottom">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={cn(
-                'rounded-md p-1.5 transition-all duration-200',
-                viewMode === 'grid'
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <LayoutGrid className="h-4 w-4" />
             </button>
           </Tooltip>
         </div>

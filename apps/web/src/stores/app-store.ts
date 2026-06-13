@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 type Theme = 'light' | 'dark' | 'system';
-type ViewMode = 'list' | 'grid';
+type ViewMode = 'summary' | 'newspaper' | 'list';
 type ArticleView = 'all' | 'starred' | 'read';
 
 interface AppState {
@@ -117,7 +117,7 @@ export const useAppStore = create<AppState>()(
       },
 
       // View
-      viewMode: 'list',
+      viewMode: 'summary',
       setViewMode: (mode) => set({ viewMode: mode }),
 
       // Article filtering
