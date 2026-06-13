@@ -34,6 +34,8 @@ import {
   RefreshCw,
   Headphones,
   ArrowLeft,
+  Github,
+  ExternalLink,
 } from 'lucide-react';
 import type { AIModel, Settings } from '@knowflow/shared';
 
@@ -1334,7 +1336,7 @@ export function SettingsPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold">KnowFlow</h3>
-                    <p className="text-xs text-muted-foreground">Version 0.1.1</p>
+                    <p className="text-xs text-muted-foreground">Version {__APP_VERSION__}</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -1342,6 +1344,18 @@ export function SettingsPage() {
                   Subscribe to WeChat public accounts and more, read with AI summaries,
                   Q&A, and mind maps.
                 </p>
+                <div className="mt-4 flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('https://github.com/Jonasorz/KnowFlow', '_blank', 'noopener,noreferrer')}
+                    className="h-8 gap-1.5 text-xs"
+                  >
+                    <Github className="h-3.5 w-3.5" />
+                    GitHub
+                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </div>
               </div>
             </div>
           </section>
