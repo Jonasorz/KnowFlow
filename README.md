@@ -53,10 +53,10 @@ The easiest way to run KnowFlow is Docker Compose. Clone the repository first so
 ```bash
 git clone https://github.com/Jonasorz/KnowFlow.git
 cd KnowFlow
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow is ready: http://localhost:5173\n"
 ```
 
-Then open http://localhost:5173.
+Then open the printed local URL.
 
 Docker Compose automatically pulls the prebuilt image:
 
@@ -77,7 +77,7 @@ Local data is stored in `./data` by default when running with Docker Compose.
 If port `5173` is already in use:
 
 ```bash
-WEB_PORT=5180 docker compose up -d
+WEB_PORT=5180 docker compose up -d && printf "\nKnowFlow is ready: http://localhost:5180\n"
 ```
 
 Then open http://localhost:5180.
@@ -88,7 +88,7 @@ If you do not want to clone the full source code, you can download only the Comp
 mkdir knowflow
 cd knowflow
 curl -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlow/main/docker-compose.yml
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow is ready: http://localhost:5173\n"
 ```
 
 For full setup details, see the [installation guide](https://github.com/Jonasorz/KnowFlow/blob/main/docs/installation.md).

@@ -13,10 +13,10 @@ This is the recommended path because it gives you the Compose file, docs, and up
 ```bash
 git clone https://github.com/Jonasorz/KnowFlow.git
 cd KnowFlow
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow is ready: http://localhost:5173\n"
 ```
 
-When the containers are started, open http://localhost:5173.
+Then open the printed local URL.
 
 ### Option B: Use only the Compose file
 
@@ -26,10 +26,10 @@ If you do not want the source code, create an empty folder and download only `do
 mkdir knowflow
 cd knowflow
 curl -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlow/main/docker-compose.yml
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow is ready: http://localhost:5173\n"
 ```
 
-When the containers are started, open http://localhost:5173.
+Then open the printed local URL.
 
 On Windows, use PowerShell and `curl.exe`:
 
@@ -38,9 +38,10 @@ mkdir knowflow
 cd knowflow
 curl.exe -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlow/main/docker-compose.yml
 docker compose up -d
+Write-Host "`nKnowFlow is ready: http://localhost:5173"
 ```
 
-Then open http://localhost:5173.
+Then open the printed local URL.
 
 ### Optional: Pull the image first
 
@@ -53,7 +54,7 @@ docker pull ghcr.io/jonasorz/knowflow:latest
 This only downloads the image. It does not start KnowFlow. Start the app with:
 
 ```bash
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow is ready: http://localhost:5173\n"
 ```
 
 ### Change the web port
@@ -61,7 +62,7 @@ docker compose up -d
 If port `5173` is already in use:
 
 ```bash
-WEB_PORT=5180 docker compose up -d
+WEB_PORT=5180 docker compose up -d && printf "\nKnowFlow is ready: http://localhost:5180\n"
 ```
 
 Then open http://localhost:5180.
@@ -71,6 +72,7 @@ On Windows PowerShell:
 ```powershell
 $env:WEB_PORT=5180
 docker compose up -d
+Write-Host "`nKnowFlow is ready: http://localhost:5180"
 ```
 
 Docker Compose stores local SQLite data in `./data`:
@@ -90,7 +92,7 @@ docker compose down
 To run in the background:
 
 ```bash
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow is ready: http://localhost:5173\n"
 ```
 
 View logs with:
@@ -114,10 +116,10 @@ Then pull the latest image and start again:
 
 ```bash
 docker compose pull
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow is ready: http://localhost:5173\n"
 ```
 
-Open http://localhost:5173 after the containers start.
+Open the printed local URL after the containers start.
 
 ### Uninstall Docker Deployment
 

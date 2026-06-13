@@ -45,10 +45,10 @@ Docker 安装只需要：
 ```bash
 git clone https://github.com/Jonasorz/KnowFlow.git
 cd KnowFlow
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow 已启动：http://localhost:5173\n"
 ```
 
-然后打开 http://localhost:5173。
+然后打开命令行里提示的本地链接。
 
 Docker Compose 默认使用公开镜像：
 
@@ -65,7 +65,7 @@ docker pull ghcr.io/jonasorz/knowflow:latest
 注意：`docker pull` 只会下载镜像，不会启动应用。启动应用仍然使用：
 
 ```bash
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow 已启动：http://localhost:5173\n"
 ```
 
 ### 方式二：只下载 Compose 文件
@@ -76,10 +76,10 @@ docker compose up -d
 mkdir knowflow
 cd knowflow
 curl -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlow/main/docker-compose.yml
-docker compose up -d
+docker compose up -d && printf "\nKnowFlow 已启动：http://localhost:5173\n"
 ```
 
-然后打开 http://localhost:5173。
+然后打开命令行里提示的本地链接。
 
 Windows 建议在 PowerShell 下执行，并使用 `curl.exe`：
 
@@ -88,16 +88,17 @@ mkdir knowflow
 cd knowflow
 curl.exe -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlow/main/docker-compose.yml
 docker compose up -d
+Write-Host "`nKnowFlow 已启动：http://localhost:5173"
 ```
 
-然后打开 http://localhost:5173。
+然后打开命令行里提示的本地链接。
 
 ### 修改端口
 
 如果 `5173` 端口已被占用：
 
 ```bash
-WEB_PORT=5180 docker compose up -d
+WEB_PORT=5180 docker compose up -d && printf "\nKnowFlow 已启动：http://localhost:5180\n"
 ```
 
 然后打开 http://localhost:5180。
@@ -107,6 +108,7 @@ Windows PowerShell:
 ```powershell
 $env:WEB_PORT=5180
 docker compose up -d
+Write-Host "`nKnowFlow 已启动：http://localhost:5180"
 ```
 
 Docker Compose 默认把本地 SQLite 数据保存在当前目录的 `./data` 下。升级镜像前建议先执行 `docker compose down` 并备份 `data` 目录；卸载时 `docker compose down` 只会移除容器，不会删除 `./data`。
