@@ -73,6 +73,8 @@ $env:WEB_PORT=5180
 docker compose up -d
 ```
 
+### Docker Data Directory
+
 Docker Compose stores local SQLite data in `./data`:
 
 ```text
@@ -80,6 +82,8 @@ data/knowflow.db
 ```
 
 If you use Docker, keep the folder that contains `docker-compose.yml` and `./data`. This directory is the local data directory for the Docker deployment.
+
+### Stop Docker Deployment
 
 Stop the app with:
 
@@ -121,13 +125,23 @@ Open http://localhost:5173 after the containers start.
 
 ### Uninstall Docker Deployment
 
-Stop and remove the containers:
+To stop and remove the containers while keeping your local data:
 
 ```bash
 docker compose down
 ```
 
-This keeps `./data` by default. To fully remove KnowFlow data, delete the local project folder or remove `./data` after you have backed up anything you need.
+This keeps `./data` by default, so you can start KnowFlow again later without losing subscriptions, articles, settings, or API keys.
+
+To fully uninstall KnowFlow, first stop the containers, then delete the folder that contains `docker-compose.yml` and `./data`.
+
+If you cloned the repository, remove the cloned `KnowFlow` folder after backing up anything you need. If you used only the Compose file, remove the `knowflow` folder you created.
+
+Do not delete `./data` unless you want to permanently remove the local SQLite database:
+
+```text
+data/knowflow.db
+```
 
 To build the Docker image locally instead of using the prebuilt GHCR image:
 
