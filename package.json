@@ -1,14 +1,14 @@
 {
   "name": "knowflow",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "KnowFlow — Multi-source content aggregation reader",
   "license": "MIT",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
     "start": "turbo start",
-    "start:docker": "turbo start:docker",
+    "start:docker": "node scripts/docker-start.mjs",
     "lint": "turbo lint",
     "licenses:check": "pnpm -r --if-present licenses:check",
     "licenses:report": "pnpm -r --if-present licenses:report",

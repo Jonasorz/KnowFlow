@@ -81,6 +81,17 @@ docker compose up -d
 
 然后打开 http://localhost:5173。
 
+Windows 建议在 PowerShell 下执行，并使用 `curl.exe`：
+
+```powershell
+mkdir knowflow
+cd knowflow
+curl.exe -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlow/main/docker-compose.yml
+docker compose up -d
+```
+
+然后打开 http://localhost:5173。
+
 ### 修改端口
 
 如果 `5173` 端口已被占用：
@@ -98,7 +109,7 @@ $env:WEB_PORT=5180
 docker compose up -d
 ```
 
-Docker Compose 默认把本地 SQLite 数据保存在当前目录的 `./data` 下。
+Docker Compose 默认把本地 SQLite 数据保存在当前目录的 `./data` 下。升级镜像前建议先执行 `docker compose down` 并备份 `data` 目录；卸载时 `docker compose down` 只会移除容器，不会删除 `./data`。
 
 完整安装说明见 [安装文档](https://github.com/Jonasorz/KnowFlow/blob/main/docs/installation.md)。
 

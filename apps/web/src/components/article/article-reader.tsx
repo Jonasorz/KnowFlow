@@ -53,9 +53,10 @@ import {
   Check,
   Square,
   BookOpen,
+  AlertCircle,
 } from 'lucide-react';
 import { useNavigate, useParams } from '@tanstack/react-router';
-import type { AIModel } from '@knowflow/shared';
+import type { AIModel, Settings } from '@knowflow/shared';
 
 const staticModels: { value: AIModel; label: string }[] = [
   { value: 'deepseek-chat', label: 'DeepSeek Chat' },
@@ -300,6 +301,30 @@ function extractEntitiesAndReferences(summaryText: string): string {
   return sectionLines.join('\n').trim();
 }
 
+function getModelProvider(model: AIModel): 'deepseek' | 'moonshot' | 'openrouter' | 'openai' {
+  if (model.startsWith('openrouter/')) return 'openrouter';
+  if (model.startsWith('kimi-')) return 'moonshot';
+  if (model.startsWith('gpt-')) return 'openai';
+  return 'deepseek';
+}
+
+function getMissingModelKeyMessage(model: AIModel, settings?: Settings): string | null {
+  const provider = getModelProvider(model);
+  if (provider === 'deepseek' && !settings?.deepseekApiKey) {
+    return '未配置 DeepSeek API Key。请先在 Settings > LLM 中配置后再使用 AI 功能。';
+  }
+  if (provider === 'moonshot' && !settings?.moonshotApiKey) {
+    return '未配置 Moonshot (Kimi) API Key。请先在 Settings > LLM 中配置后再使用 AI 功能。';
+  }
+  if (provider === 'openrouter' && !settings?.openrouterApiKey) {
+    return '未配置 OpenRouter API Key。请先在 Settings > LLM 中配置后再使用 AI 功能。';
+  }
+  if (provider === 'openai') {
+    return '当前界面选择了 OpenAI 模型，但本版本 Settings 暂未提供 OpenAI API Key 配置。请改用 DeepSeek、Moonshot 或 OpenRouter 模型。';
+  }
+  return null;
+}
+
 
 export function ArticleReader() {
   const params = useParams({ from: '/article/$id' });
@@ -500,6 +525,11 @@ export function ArticleReader() {
 
   const handleGenerate = async (skill: 'summary' | 'mindmap') => {
     if (!article) return;
+    const missingKeyMessage = getMissingModelKeyMessage(selectedModel, settings);
+    if (missingKeyMessage) {
+      window.alert(missingKeyMessage);
+      return;
+    }
     const fn = skill === 'summary' ? startSummary : startMindmap;
     try {
       await fn({
@@ -516,6 +546,12 @@ export function ArticleReader() {
 
   const handleIdentifySpeakersClick = async () => {
     if (!article) return;
+    const model = settings?.defaultAIModel || selectedModel;
+    const missingKeyMessage = getMissingModelKeyMessage(model, settings);
+    if (missingKeyMessage) {
+      window.alert(missingKeyMessage);
+      return;
+    }
     try {
       setIsCustomEditing(false);
       const res = await identifySpeakers.mutateAsync(article.id);
@@ -555,6 +591,15 @@ export function ArticleReader() {
     }
     setSpeakerMapping(initialMapping);
     setIsSpeakerModalOpen(true);
+  };
+
+  const handleTranscribeClick = () => {
+    if (!article) return;
+    if (!settings?.dashscopeApiKey) {
+      window.alert('未配置转写 API。请先在 Settings > LLM 中配置通义听悟 (DashScope) API Key 后再生成真实逐字稿。');
+      return;
+    }
+    transcribeArticle.mutate(article.id);
   };
 
 
@@ -846,7 +891,14 @@ export function ArticleReader() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => openAiSidebar(article.id)}
+              onClick={() => {
+                const missingKeyMessage = getMissingModelKeyMessage(settings?.defaultAIModel || selectedModel, settings);
+                if (missingKeyMessage) {
+                  window.alert(missingKeyMessage);
+                  return;
+                }
+                openAiSidebar(article.id);
+              }}
               className="h-8 text-xs"
             >
               <MessageSquare className="h-3.5 w-3.5 mr-1" />
@@ -945,9 +997,15 @@ export function ArticleReader() {
               <div className="flex flex-col items-center justify-center p-10 border border-dashed border-border rounded-2xl bg-muted/10 my-8">
                 <Headphones className="h-12 w-12 text-muted-foreground mb-4 stroke-[1.5]" />
                 <h3 className="text-sm font-semibold mb-1 text-foreground">暂无逐字稿</h3>
-                <p className="text-xs text-muted-foreground text-center max-w-sm mb-6 leading-relaxed">
-                  本期单集尚未转录。您可以启动 AI 语音转写服务，自动识别音频并生成带时间戳和发言人的详细逐字稿。
+                <p className="text-xs text-muted-foreground text-center max-w-sm mb-3 leading-relaxed">
+                  本期单集尚未转录。配置通义听悟 (DashScope) API Key 后，可以生成带时间戳和发言人的真实逐字稿。
                 </p>
+                {!settings?.dashscopeApiKey && (
+                  <div className="mb-6 flex max-w-sm items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>尚未配置转写 API，不能生成真实逐字稿。项目不会内置您的服务商密钥。</span>
+                  </div>
+                )}
                 
                 {isTranscribingThis ? (
                   <Button disabled className="gap-2 text-xs">
@@ -955,7 +1013,7 @@ export function ArticleReader() {
                     正在转写音频 ({transcribeProgress}%)...
                   </Button>
                 ) : (
-                  <Button onClick={() => transcribeArticle.mutate(article.id)} className="gap-2 text-xs shadow-md">
+                  <Button onClick={handleTranscribeClick} className="gap-2 text-xs shadow-md">
                     <Sparkles className="h-3.5 w-3.5" />
                     生成 AI 逐字稿
                   </Button>
@@ -987,7 +1045,7 @@ export function ArticleReader() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => transcribeArticle.mutate(article.id)}
+                          onClick={handleTranscribeClick}
                           className="h-7 text-xs px-2.5 gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
                         >
                           <RotateCw className="h-3 w-3" />
@@ -1062,6 +1120,12 @@ export function ArticleReader() {
                       ? '尚未为本篇内容生成 AI 总结。点击下方按钮开始生成总结并提炼其中的参考与知识实体。'
                       : '尚未为本篇内容生成 AI 结构化思维脑图。点击下方按钮开始生成。'}
                 </p>
+                {getMissingModelKeyMessage(selectedModel, settings) && (
+                  <div className="mb-6 flex max-w-md items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>{getMissingModelKeyMessage(selectedModel, settings)}</span>
+                  </div>
+                )}
                 
                 <div className="flex items-center gap-3 w-full max-w-md justify-center select-none">
                   <Button 

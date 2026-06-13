@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   LayoutList,
   RefreshCw,
+  RefreshCcw,
   ArrowUpDown,
   Clock,
   Eye,
@@ -38,6 +39,8 @@ export function Header() {
     currentView,
     selectedSourceId,
     selectedTag,
+    selectedTagSourceId,
+    setSelectedTagSourceId,
   } = useAppStore();
 
   const { data: sources } = useSources();
@@ -72,6 +75,10 @@ export function Header() {
     }
   };
 
+  const tagSources = selectedTag && sources
+    ? sources.filter((s) => s.tags && s.tags.includes(selectedTag))
+    : [];
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-border bg-background/80 px-6 glass">
       {/* Title */}
@@ -81,6 +88,22 @@ export function Header() {
 
       {/* Search & Actions */}
       <div className="flex flex-1 items-center justify-end gap-2">
+        {/* Source filter within selected tag */}
+        {selectedTag && tagSources.length > 0 && (
+          <select
+            value={selectedTagSourceId || ''}
+            onChange={(e) => setSelectedTagSourceId(e.target.value || null)}
+            className="h-8 max-w-[180px] rounded-md border border-border bg-muted/50 px-2 text-xs text-foreground outline-none focus:border-border focus:bg-background"
+          >
+            <option value="">全部订阅源</option>
+            {tagSources.map((source) => (
+              <option key={source.id} value={source.id}>
+                {source.name}
+              </option>
+            ))}
+          </select>
+        )}
+
         {/* Search */}
         <div className="w-full max-w-xs">
           <Input
@@ -193,10 +216,10 @@ export function Header() {
             onClick={() => syncAll.mutate(undefined)}
             disabled={syncAll.isPending}
           >
-            <RefreshCw
+            <RefreshCcw
               className={cn(
                 'h-4 w-4 transition-transform',
-                syncAll.isPending && 'animate-spin' && !(selectedSourceId || selectedTag)
+                syncAll.isPending && !(selectedSourceId || selectedTag) && 'animate-spin'
               )}
             />
           </Button>

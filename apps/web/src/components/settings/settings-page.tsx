@@ -962,6 +962,18 @@ export function SettingsPage() {
                 onSave={() => handleSaveKey('twitterApiKey')}
                 saving={updateSettings.isPending}
               >
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  使用 twitterapi.io 获取 X/Twitter 用户资料与推文。可在{' '}
+                  <a
+                    href="https://twitterapi.io/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    twitterapi.io
+                  </a>{' '}
+                  申请 API Key。
+                </p>
                 {settings?.twitterApiKey && (
                   <TwitterBalanceQuery />
                 )}
@@ -1322,7 +1334,7 @@ export function SettingsPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold">KnowFlow</h3>
-                    <p className="text-xs text-muted-foreground">Version 0.1.0</p>
+                    <p className="text-xs text-muted-foreground">Version 0.1.1</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">

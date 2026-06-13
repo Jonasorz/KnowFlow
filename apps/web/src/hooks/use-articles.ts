@@ -4,7 +4,7 @@ import type { ArticleFilter, UpdateArticleInput } from '@knowflow/shared';
 import { useAppStore } from '@/stores/app-store';
 
 export function useArticles(overrides?: Partial<ArticleFilter>) {
-  const { currentView, selectedSourceId, selectedTag, searchQuery, sortBy, sortOrder } = useAppStore();
+  const { currentView, selectedSourceId, selectedTag, selectedTagSourceId, searchQuery, sortBy, sortOrder } = useAppStore();
 
   const filter: Partial<ArticleFilter> = {
     sortBy,
@@ -14,6 +14,7 @@ export function useArticles(overrides?: Partial<ArticleFilter>) {
 
   if (searchQuery) filter.search = searchQuery;
   if (selectedSourceId) filter.sourceId = selectedSourceId;
+  if (selectedTag && selectedTagSourceId) filter.sourceId = selectedTagSourceId;
   if (selectedTag) filter.tag = selectedTag;
   if (currentView === 'starred') filter.isStarred = true;
   if (currentView === 'read') filter.isRead = true;

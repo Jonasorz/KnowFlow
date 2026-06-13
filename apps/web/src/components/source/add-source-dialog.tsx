@@ -89,6 +89,38 @@ function parseCSV(text: string): string[][] {
   return result;
 }
 
+function parsePodcastOPML(text: string): Array<{ name: string; identifier: string; description?: string; avatarUrl?: string }> {
+  const doc = new DOMParser().parseFromString(text, 'text/xml');
+  if (doc.querySelector('parsererror')) {
+    throw new Error('OPML/XML 文件格式不正确');
+  }
+
+  return Array.from(doc.querySelectorAll('outline'))
+    .map((node) => {
+      const identifier = node.getAttribute('xmlUrl') || node.getAttribute('xmlurl') || '';
+      const name = node.getAttribute('title') || node.getAttribute('text') || identifier;
+      const description = node.getAttribute('description') || node.getAttribute('htmlUrl') || node.getAttribute('htmlurl') || '';
+      return {
+        name: name.trim(),
+        identifier: identifier.trim(),
+        description: description.trim(),
+      };
+    })
+    .filter((item) => item.identifier.startsWith('http'));
+}
+
+function normalizeTwitterHandle(input: string): string {
+  let handle = input.trim();
+  if (handle.startsWith('https://x.com/') || handle.startsWith('https://twitter.com/')) {
+    const url = new URL(handle);
+    handle = url.pathname.split('/').filter(Boolean)[0] || '';
+  }
+  if (handle.startsWith('@')) {
+    handle = handle.substring(1);
+  }
+  return handle.split('?')[0].replace(/['"]/g, '').trim();
+}
+
 export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
   const [platform, setPlatform] = useState<'wechat' | 'twitter' | 'podcast'>('wechat');
   const [activeTab, setActiveTab] = useState<'search' | 'manual' | 'bulk'>('search');
@@ -374,6 +406,16 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
           return;
         }
 
+        if (platform === 'podcast') {
+          const sources = parsePodcastOPML(text);
+          if (sources.length === 0) {
+            setBulkError('未在 OPML 文件中解析到有效的播客 RSS 地址');
+            return;
+          }
+          setParsedSources(sources);
+          return;
+        }
+
         const parsedRows = parseCSV(text);
         if (parsedRows.length < 2) {
           setBulkError('CSV 文件格式不正确或没有数据');
@@ -432,16 +474,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
         }
 
         const sources = parsedRows.slice(1).map(row => {
-          let identifier = row[usernameIndex]?.trim() || '';
-          if (identifier.startsWith('https://x.com/') || identifier.startsWith('https://twitter.com/')) {
-            const parts = identifier.split('/');
-            identifier = parts[parts.length - 1];
-          }
-          if (identifier.startsWith('@')) {
-            identifier = identifier.substring(1);
-          }
-          // Remove potential query parameters or quotes
-          identifier = identifier.split('?')[0].replace(/['"]/g, '').trim();
+          const identifier = normalizeTwitterHandle(row[usernameIndex] || '');
 
           const name = nameIndex !== -1 ? row[nameIndex]?.trim() || identifier : identifier;
           const description = bioIndex !== -1 ? row[bioIndex]?.trim() || '' : '';
@@ -495,7 +528,8 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
         .split(/[\s,;\n]+/)
         .map((id) => id.trim())
         .filter((id) => id.length > 0)
-        .map((id) => id.startsWith('@') ? id.substring(1) : id);
+        .map(normalizeTwitterHandle)
+        .filter((id) => id.length > 0);
 
       if (identifiers.length === 0) {
         setBulkError('未能提取到有效的 Twitter 用户名');
@@ -513,6 +547,37 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
         setBulkError(err instanceof Error ? err.message : '批量导入失败');
       }
     }
+  };
+
+  const handlePodcastBulkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBulkError('');
+    setBulkImportResults(null);
+
+    if (parsedSources.length === 0) {
+      setBulkError('请先选择有效的 OPML 文件');
+      return;
+    }
+
+    const results: Array<{ identifier: string; success: boolean; error?: string }> = [];
+    for (const source of parsedSources) {
+      try {
+        await createSource.mutateAsync({
+          type: 'podcast',
+          name: source.name,
+          identifier: source.identifier,
+          description: source.description,
+        });
+        results.push({ identifier: source.name || source.identifier, success: true });
+      } catch (err) {
+        results.push({
+          identifier: source.name || source.identifier,
+          success: false,
+          error: err instanceof Error ? err.message : '导入失败',
+        });
+      }
+    }
+    setBulkImportResults(results);
   };
 
   const localBiz = extractBiz(manualBizOrUrl);
@@ -606,7 +671,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
             <Plus className="h-3.5 w-3.5" />
             手动添加
           </button>
-          {platform === 'twitter' && (
+          {(platform === 'twitter' || platform === 'podcast') && (
             <button
               onClick={() => setActiveTab('bulk')}
               className={cn(
@@ -616,8 +681,8 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                   : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
               )}
             >
-              <Users className="h-3.5 w-3.5" />
-              批量导入
+              {platform === 'podcast' ? <Upload className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+              {platform === 'podcast' ? 'OPML 导入' : '批量导入'}
             </button>
           )}
         </div>
@@ -977,7 +1042,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                 <div className="max-h-60 overflow-y-auto space-y-1.5 border border-border rounded-xl p-3 bg-muted/20">
                   {bulkImportResults.map((res, i) => (
                     <div key={i} className="flex items-center justify-between text-xs py-1">
-                      <span className="font-mono font-semibold">@{res.identifier}</span>
+                      <span className="font-mono font-semibold">{platform === 'podcast' ? res.identifier : `@${res.identifier}`}</span>
                       {res.success ? (
                         <span className="text-green-600 flex items-center gap-1 font-medium">
                           <Check className="h-3.5 w-3.5" /> 导入成功
@@ -997,9 +1062,10 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleTwitterBulkSubmit} className="space-y-3.5 mt-2">
+              <form onSubmit={platform === 'podcast' ? handlePodcastBulkSubmit : handleTwitterBulkSubmit} className="space-y-3.5 mt-2">
                 {/* Bulk Import Mode Selector */}
-                <div className="grid grid-cols-2 gap-1.5 p-0.5 rounded-lg bg-muted/65 border border-border/40 text-[11px] mb-2">
+                {platform === 'twitter' && (
+                  <div className="grid grid-cols-2 gap-1.5 p-0.5 rounded-lg bg-muted/65 border border-border/40 text-[11px] mb-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -1032,7 +1098,8 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                   >
                     文本批量粘贴
                   </button>
-                </div>
+                  </div>
+                )}
 
                 {parsedSources.length > 0 ? (
                   <div className="space-y-3">
@@ -1042,7 +1109,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                         <div className="min-w-0">
                           <p className="text-xs font-semibold truncate text-foreground">{fileName}</p>
                           <p className="text-[10px] text-muted-foreground mt-0.5">
-                            解析成功，共 {parsedSources.length} 个待导入用户
+                            解析成功，共 {parsedSources.length} 个待导入{platform === 'podcast' ? '播客订阅源' : '用户'}
                           </p>
                         </div>
                       </div>
@@ -1076,11 +1143,13 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                                 />
                               ) : (
                                 <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                  <Twitter className="h-3 w-3 text-primary" />
+                                  {platform === 'podcast' ? <Headphones className="h-3 w-3 text-primary" /> : <Twitter className="h-3 w-3 text-primary" />}
                                 </div>
                               )}
                               <span>{src.name}</span>
-                              <span className="font-mono text-[10px] text-muted-foreground font-normal">@{src.identifier}</span>
+                              <span className="font-mono text-[10px] text-muted-foreground font-normal">
+                                {platform === 'podcast' ? src.identifier : `@${src.identifier}`}
+                              </span>
                             </div>
                             {src.description && (
                               <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5 leading-normal">{src.description}</p>
@@ -1089,17 +1158,17 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                         ))}
                         {parsedSources.length > 5 && (
                           <div className="p-2 text-center text-[10px] text-muted-foreground bg-muted/5 border-t border-border/60">
-                            ... 还有 {parsedSources.length - 5} 个账户
+                            ... 还有 {parsedSources.length - 5} 个{platform === 'podcast' ? '订阅源' : '账户'}
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
-                ) : bulkMode === 'file' ? (
+                ) : platform === 'podcast' || bulkMode === 'file' ? (
                   <div className="border border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center gap-3 bg-muted/5 hover:bg-muted/10 transition-colors cursor-pointer relative group">
                     <input
                       type="file"
-                      accept=".csv"
+                      accept={platform === 'podcast' ? '.opml,.xml' : '.csv'}
                       onChange={handleFileChange}
                       className="absolute inset-0 opacity-0 cursor-pointer"
                     />
@@ -1107,8 +1176,14 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                       <Upload className="h-5 w-5" />
                     </div>
                     <div className="text-center">
-                      <p className="text-xs font-semibold text-foreground">选择或拖拽 CSV 文件上传</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">支持包含 Username、Name、Bio 列的 CSV 列表</p>
+                      <p className="text-xs font-semibold text-foreground">
+                        {platform === 'podcast' ? '选择或拖拽 OPML 文件上传' : '选择或拖拽 CSV 文件上传'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {platform === 'podcast'
+                          ? '支持小宇宙等播客应用导出的 OPML 订阅列表'
+                          : '支持 X/Twitter 导出 CSV：Username、Name、Bio/Description、Avatar 列'}
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -1121,7 +1196,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                       className="w-full h-32 text-xs font-mono p-3 rounded-lg border border-border bg-card focus:outline-none focus:ring-1 focus:ring-primary leading-normal resize-none"
                     />
                     <p className="text-[10px] text-muted-foreground leading-normal">
-                      提示：批量导入时，系统会自动在后台调用 API 拉取这些账户的昵称、头像和简介，并自动订阅。请使用逗号、空格或换行分隔用户名。
+                      提示：文本模式支持 @handle、handle、个人主页 URL，用逗号、空格或换行分隔。CSV 模式支持 Chrome 插件或其它工具导出的关注列表，常见列名包括 Username、Name、Bio/Description、Avatar。
                     </p>
                   </div>
                 )}
@@ -1137,9 +1212,9 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                   <Button
                     type="submit"
                     size="sm"
-                    disabled={bulkImport.isPending || (bulkMode !== 'text' && parsedSources.length === 0)}
+                    disabled={bulkImport.isPending || createSource.isPending || ((platform === 'podcast' || bulkMode !== 'text') && parsedSources.length === 0)}
                   >
-                    {bulkImport.isPending ? '正在导入...' : '开始导入'}
+                    {bulkImport.isPending || createSource.isPending ? '正在导入...' : '开始导入'}
                   </Button>
                 </div>
               </form>

@@ -159,7 +159,12 @@ export const aiApi = {
       body: JSON.stringify(data),
     });
     if (!res.ok || !res.body) {
-      throw new ApiError('Stream request failed', res.status);
+      const error = await res.json().catch(() => ({}));
+      throw new ApiError(
+        (error as { error?: string }).error || `Stream request failed: ${res.status}`,
+        res.status,
+        error
+      );
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();

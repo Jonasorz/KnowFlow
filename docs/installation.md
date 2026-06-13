@@ -16,7 +16,7 @@ cd KnowFlow
 docker compose up -d
 ```
 
-Open http://localhost:5173.
+When the containers are started, open http://localhost:5173.
 
 ### Option B: Use only the Compose file
 
@@ -29,7 +29,18 @@ curl -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlo
 docker compose up -d
 ```
 
-Open http://localhost:5173.
+When the containers are started, open http://localhost:5173.
+
+On Windows, use PowerShell and `curl.exe`:
+
+```powershell
+mkdir knowflow
+cd knowflow
+curl.exe -L -o docker-compose.yml https://raw.githubusercontent.com/Jonasorz/KnowFlow/main/docker-compose.yml
+docker compose up -d
+```
+
+Then open http://localhost:5173.
 
 ### Optional: Pull the image first
 
@@ -68,6 +79,8 @@ Docker Compose stores local SQLite data in `./data`:
 data/knowflow.db
 ```
 
+If you use Docker, keep the folder that contains `docker-compose.yml` and `./data`. This directory is the local data directory for the Docker deployment.
+
 Stop the app with:
 
 ```bash
@@ -85,6 +98,36 @@ View logs with:
 ```bash
 docker compose logs -f
 ```
+
+### Upgrade Docker Deployment
+
+KnowFlow stores Docker data in `./data`, so upgrading the container image does not delete your database as long as you keep that folder.
+
+Before upgrading, stop the app and make a backup:
+
+```bash
+docker compose down
+cp -R data data.backup
+```
+
+Then pull the latest image and start again:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Open http://localhost:5173 after the containers start.
+
+### Uninstall Docker Deployment
+
+Stop and remove the containers:
+
+```bash
+docker compose down
+```
+
+This keeps `./data` by default. To fully remove KnowFlow data, delete the local project folder or remove `./data` after you have backed up anything you need.
 
 To build the Docker image locally instead of using the prebuilt GHCR image:
 

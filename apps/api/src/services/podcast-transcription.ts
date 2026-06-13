@@ -764,7 +764,8 @@ async function transcribeWithDashScope(
 
 /**
  * Transcribe a podcast audio URL.
- * Falls back to simulation if the file is too large or if it fails.
+ * Requires a configured transcription provider. Simulated transcripts are kept
+ * for tests or explicit internal use only because they can be mistaken for real ASR.
  */
 export async function transcribePodcast(
   audioUrl: string,
@@ -777,12 +778,12 @@ export async function transcribePodcast(
 ): Promise<{ text: string; html: string }> {
   logDebug(`Transcribing podcast: ${title}, URL: ${audioUrl}, API Key configured: ${!!apiKey}, DashScope Key configured: ${!!dashscopeApiKey}`);
 
-  // Short delay to simulate real transcription work and keep UX satisfying
-  await new Promise((resolve) => setTimeout(resolve, 3000));
-
   if (!audioUrl) {
-    logDebug('No audio URL, using simulated transcript');
-    return generateSimulatedTranscript(title, shownotes, duration);
+    throw new Error('Audio URL is missing for this episode.');
+  }
+
+  if (!dashscopeApiKey && !apiKey) {
+    throw new Error('未配置转写 API。请先在 Settings 中配置通义听悟 (DashScope) API Key 后再生成真实逐字稿。');
   }
 
   const tempDir = join(process.cwd(), 'data', 'temp_transcribe');
@@ -807,7 +808,7 @@ export async function transcribePodcast(
         logDebug('DashScope transcription completed successfully!');
         return result;
       } catch (err) {
-        logDebug(`DashScope transcription failed: ${err instanceof Error ? err.message : String(err)}. Falling back to Whisper/simulated.`);
+        logDebug(`DashScope transcription failed: ${err instanceof Error ? err.message : String(err)}. Trying Whisper if configured.`);
       }
     }
 
@@ -905,17 +906,15 @@ export async function transcribePodcast(
           };
         }
       } catch (err) {
-        logDebug(`Whisper transcription failed: ${err instanceof Error ? err.message : String(err)}. Falling back to simulation.`);
+        logDebug(`Whisper transcription failed: ${err instanceof Error ? err.message : String(err)}.`);
       }
     }
 
-    // 3. Fallback to simulation
-    logDebug('All transcription API providers failed or not configured, using simulated transcript');
-    return generateSimulatedTranscript(title, shownotes, duration);
+    throw new Error('转写失败。请检查转写 API Key、音频链接和 ffmpeg 配置后重试。');
 
   } catch (err) {
-    logDebug(`Transcription failed: ${err instanceof Error ? err.message : String(err)}. Falling back to simulation.`);
-    return generateSimulatedTranscript(title, shownotes, duration);
+    logDebug(`Transcription failed: ${err instanceof Error ? err.message : String(err)}.`);
+    throw err;
   } finally {
     // Delete temporary files
     try {

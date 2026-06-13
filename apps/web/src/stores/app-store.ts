@@ -30,6 +30,8 @@ interface AppState {
   // Selected tag
   selectedTag: string | null;
   setSelectedTag: (tag: string | null) => void;
+  selectedTagSourceId: string | null;
+  setSelectedTagSourceId: (id: string | null) => void;
 
   // Search
   searchQuery: string;
@@ -124,11 +126,13 @@ export const useAppStore = create<AppState>()(
 
       // Selected source
       selectedSourceId: null,
-      setSelectedSourceId: (id) => set({ selectedSourceId: id, currentView: 'all', selectedTag: null }),
+      setSelectedSourceId: (id) => set({ selectedSourceId: id, currentView: 'all', selectedTag: null, selectedTagSourceId: null }),
 
       // Selected tag
       selectedTag: null,
-      setSelectedTag: (tag) => set({ selectedTag: tag, selectedSourceId: null, currentView: 'all' }),
+      selectedTagSourceId: null,
+      setSelectedTag: (tag) => set({ selectedTag: tag, selectedSourceId: null, selectedTagSourceId: null, currentView: 'all' }),
+      setSelectedTagSourceId: (id) => set({ selectedTagSourceId: id }),
 
       // Search
       searchQuery: '',

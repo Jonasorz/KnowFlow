@@ -182,7 +182,7 @@ export function Sidebar() {
           <NavItem
             icon={<FileText className="h-4 w-4" />}
             label="All Articles"
-            active={!!isHome && currentView === 'all' && !selectedSourceId}
+            active={!!isHome && currentView === 'all' && !selectedSourceId && !selectedTag}
             collapsed={sidebarCollapsed}
             onClick={() => { setCurrentView('all'); setSelectedSourceId(null); navigate({ to: '/' }); }}
           />

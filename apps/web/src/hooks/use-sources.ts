@@ -113,6 +113,7 @@ export function useSyncAllSources() {
           totalNewArticles += res.synced;
         } catch (err) {
           console.error(`Failed to sync source ${source.name}:`, err);
+          window.alert(err instanceof Error ? err.message : `同步 ${source.name} 失败`);
         }
       }
 
@@ -211,4 +212,3 @@ export function useBulkDeleteSources() {
     },
   });
 }
-
