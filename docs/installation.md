@@ -123,6 +123,10 @@ docker compose up -d
 
 Open http://localhost:5173 after the containers start.
 
+KnowFlow does not update Docker images automatically from inside the app. The container should not control the host Docker daemon or restart itself without the user choosing to upgrade. To update, run the commands above from the folder that contains `docker-compose.yml`.
+
+The version shown in Settings reflects the app version that was built into the Docker image. After pulling and restarting with a newer image, Settings should show the version from that release.
+
 ### Build Docker Image Locally
 
 To build the Docker image locally instead of using the prebuilt GHCR image:

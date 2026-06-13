@@ -12,6 +12,8 @@ Use Semantic Versioning where practical:
 
 Before `1.0.0`, minor versions may still include larger changes. Call out breaking changes clearly in release notes.
 
+The version shown in Settings is injected at web build time from the root `package.json` `version` field. Before building a release image or tagging a release, update the workspace package versions so the UI version, release tag, and Docker image all refer to the same release.
+
 ## Branches
 
 - `main` should remain usable and buildable.
@@ -62,6 +64,7 @@ Before tagging a release:
    ```
 
 5. Verify installation instructions still match the app behavior.
+6. Verify the Settings > About version matches the release version after building.
 
 ## Tagging
 
