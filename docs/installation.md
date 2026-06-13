@@ -123,6 +123,14 @@ docker compose up -d
 
 Open http://localhost:5173 after the containers start.
 
+### Build Docker Image Locally
+
+To build the Docker image locally instead of using the prebuilt GHCR image:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
+```
+
 ### Uninstall Docker Deployment
 
 To stop and remove the containers while keeping your local data:
@@ -141,12 +149,6 @@ Do not delete `./data` unless you want to permanently remove the local SQLite da
 
 ```text
 data/knowflow.db
-```
-
-To build the Docker image locally instead of using the prebuilt GHCR image:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
 ## Source Requirements
