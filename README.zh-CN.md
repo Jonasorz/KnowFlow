@@ -2,7 +2,7 @@
 
 [English](https://github.com/Jonasorz/KnowFlow/blob/main/README.md)
 
-KnowFlow 是一个本地优先的多源阅读与知识工作流应用。
+KnowFlow，知流，意为让知识流动起来，是一个本地优先的多源阅读与知识工作流应用。
 
 它把文章、推文、播客单集、转录文本和 AI 生成的笔记聚合到一个浏览器里的本地阅读器中。当前版本以本地 Web 界面运行，后端是 Node.js API，数据存储在 SQLite 中。
 
