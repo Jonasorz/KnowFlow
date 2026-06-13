@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchWechat, useSearchTwitter, useSearchPodcast, useCreateSource, useParseWechatBiz, useBulkImportSources } from '@/hooks/use-sources';
-import { Search, Plus, Check, Users, Eye, MessageCircle, HelpCircle, Loader2, Twitter, Upload, FileText, Trash2, Headphones } from 'lucide-react';
+import { Search, Plus, Check, Users, Eye, MessageCircle, HelpCircle, Loader2, Twitter, Upload, FileText, Trash2, Headphones, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { WechatAccountSearchResult } from '@knowflow/shared';
 
@@ -119,6 +119,26 @@ function normalizeTwitterHandle(input: string): string {
     handle = handle.substring(1);
   }
   return handle.split('?')[0].replace(/['"]/g, '').trim();
+}
+
+function downloadTwitterCsvTemplate() {
+  const rows = [
+    ['Username', 'Name', 'Bio', 'Avatar'],
+    ['elonmusk', 'Elon Musk', 'Tesla, SpaceX, xAI', 'https://example.com/avatar.jpg'],
+    ['@OpenAI', 'OpenAI', 'AI research and products', ''],
+  ];
+  const csv = rows
+    .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'knowflow-twitter-import-template.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
@@ -1165,25 +1185,49 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                     </div>
                   </div>
                 ) : platform === 'podcast' || bulkMode === 'file' ? (
-                  <div className="border border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center gap-3 bg-muted/5 hover:bg-muted/10 transition-colors cursor-pointer relative group">
-                    <input
-                      type="file"
-                      accept={platform === 'podcast' ? '.opml,.xml' : '.csv'}
-                      onChange={handleFileChange}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                    <div className="p-3 rounded-full bg-primary/5 text-primary group-hover:scale-105 transition-transform duration-200">
-                      <Upload className="h-5 w-5" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-semibold text-foreground">
-                        {platform === 'podcast' ? '选择或拖拽 OPML 文件上传' : '选择或拖拽 CSV 文件上传'}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        {platform === 'podcast'
-                          ? '支持小宇宙等播客应用导出的 OPML 订阅列表'
-                          : '支持 X/Twitter 导出 CSV：Username、Name、Bio/Description、Avatar 列'}
-                      </p>
+                  <div className="space-y-3">
+                    {platform === 'twitter' && (
+                      <div className="rounded-xl border border-border bg-muted/20 p-3.5 text-[11px] text-muted-foreground leading-relaxed">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <span className="font-semibold text-foreground">CSV 格式说明</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={downloadTwitterCsvTemplate}
+                            className="h-7 shrink-0 gap-1.5 px-2 text-[11px]"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            下载模板
+                          </Button>
+                        </div>
+                        <div className="space-y-1">
+                          <p><span className="font-semibold text-foreground">必填列：</span><span className="font-mono">Username</span>，可填写 <span className="font-mono">elonmusk</span>、<span className="font-mono">@OpenAI</span> 或个人主页 URL。</p>
+                          <p><span className="font-semibold text-foreground">可选列：</span><span className="font-mono">Name</span>、<span className="font-mono">Bio</span>/<span className="font-mono">Description</span>、<span className="font-mono">Avatar</span>。</p>
+                          <p><span className="font-semibold text-foreground">表头示例：</span><span className="font-mono">Username,Name,Bio,Avatar</span></p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="border border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center gap-3 bg-muted/5 hover:bg-muted/10 transition-colors cursor-pointer relative group">
+                      <input
+                        type="file"
+                        accept={platform === 'podcast' ? '.opml,.xml' : '.csv'}
+                        onChange={handleFileChange}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <div className="p-3 rounded-full bg-primary/5 text-primary group-hover:scale-105 transition-transform duration-200">
+                        <Upload className="h-5 w-5" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs font-semibold text-foreground">
+                          {platform === 'podcast' ? '选择或拖拽 OPML 文件上传' : '选择或拖拽 CSV 文件上传'}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {platform === 'podcast'
+                            ? '支持小宇宙等播客应用导出的 OPML 订阅列表'
+                            : '支持 Username、Name、Bio/Description、Avatar 列'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ) : (
