@@ -36,6 +36,7 @@ import {
   ArrowLeft,
   Github,
   ExternalLink,
+  Wifi,
 } from 'lucide-react';
 import type { AIModel, Settings } from '@knowflow/shared';
 
@@ -1428,6 +1429,40 @@ export function SettingsPage() {
 
         {activeTab === 'general' && (
           <section className="space-y-6">
+            {/* Sync Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Wifi className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold">同步</h2>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <label className="flex cursor-pointer items-center justify-between gap-4">
+                  <span className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">联网后每天自动同步一次</span>
+                    <span className="text-xs text-muted-foreground">
+                      打开应用或网络恢复时，如果今天还没自动同步过，会同步所有启用的订阅源。
+                    </span>
+                    {settings?.lastAutoSyncDate && (
+                      <span className="text-[11px] text-muted-foreground">
+                        上次自动同步日期：{settings.lastAutoSyncDate}
+                      </span>
+                    )}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={!!formState.autoSyncOnOnline}
+                    onChange={(e) => {
+                      const autoSyncOnOnline = e.target.checked;
+                      setFormState((s) => ({ ...s, autoSyncOnOnline }));
+                      updateSettings.mutate({ autoSyncOnOnline });
+                    }}
+                    disabled={updateSettings.isPending}
+                    className="h-4 w-4 accent-primary"
+                  />
+                </label>
+              </div>
+            </div>
+
             {/* Theme Section */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-1">

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
@@ -6,7 +6,54 @@ import { AiSidebar } from '@/components/ai/ai-sidebar';
 import { SyncProgressIndicator } from './sync-progress-indicator';
 import { AudioPlayer } from '@/components/ui/audio-player';
 import { useAppStore } from '@/stores/app-store';
+import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
+import { useSources, useSyncAllSources } from '@/hooks/use-sources';
 import { cn } from '@/lib/utils';
+
+function getLocalDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function DailyOnlineAutoSync() {
+  const { data: settings } = useSettings();
+  const { data: sources } = useSources();
+  const syncAll = useSyncAllSources();
+  const updateSettings = useUpdateSettings();
+  const inFlightDateRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!settings?.autoSyncOnOnline) return;
+    if (!sources?.some((source) => source.isActive)) return;
+
+    const runAutoSync = () => {
+      if (!navigator.onLine || syncAll.isPending) return;
+
+      const today = getLocalDateKey();
+      if (settings.lastAutoSyncDate === today) return;
+      if (inFlightDateRef.current === today) return;
+
+      inFlightDateRef.current = today;
+      syncAll.mutate(undefined, {
+        onSuccess: () => {
+          updateSettings.mutate({ lastAutoSyncDate: today });
+        },
+        onError: () => {
+          inFlightDateRef.current = null;
+        },
+      });
+    };
+
+    runAutoSync();
+    window.addEventListener('online', runAutoSync);
+    return () => window.removeEventListener('online', runAutoSync);
+  }, [settings?.autoSyncOnOnline, settings?.lastAutoSyncDate, sources, syncAll, updateSettings]);
+
+  return null;
+}
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -120,6 +167,7 @@ export function MainLayout({ children, showHeader = true }: MainLayoutProps) {
 
       {/* Sync Progress Indicator */}
       <SyncProgressIndicator />
+      <DailyOnlineAutoSync />
     </div>
   );
 }

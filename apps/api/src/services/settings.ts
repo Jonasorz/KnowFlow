@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS: Settings = {
   defaultAIModel: 'deepseek-chat',
   theme: 'system',
   language: 'zh',
+  autoSyncOnOnline: false,
   summarySystemPrompt: PROMPTS.summary.system,
   summaryUserPrompt: '请对以下文章进行总结：\n\n{{content}}',
   podcastSummarySystemPrompt: `你是一个专业的播客内容精炼专家和知识提炼大师。你的任务是分析播客单集的逐字稿或大纲内容，生成极具深度和可读性的复盘与要点梳理。

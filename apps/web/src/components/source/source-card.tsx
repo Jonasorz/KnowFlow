@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useDeleteSource, useSyncSource } from '@/hooks/use-sources';
+import { useDeleteSource, useSyncSource, useUpdateSource } from '@/hooks/use-sources';
 import { EditSourceDialog } from './edit-source-dialog';
 import type { SourceInfo } from '@knowflow/shared';
 import {
@@ -22,6 +22,8 @@ import {
   Edit,
   Twitter,
   Check,
+  Power,
+  PowerOff,
 } from 'lucide-react';
 
 interface SourceCardProps {
@@ -41,6 +43,7 @@ export function SourceCard({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const deleteSource = useDeleteSource();
   const syncSource = useSyncSource();
+  const updateSource = useUpdateSource();
 
   const sourceTypeLabels: Record<string, string> = {
     wechat: 'WeChat',
@@ -118,10 +121,26 @@ export function SourceCard({
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onClick={() => syncSource.mutate(source.id)}
-                disabled={syncSource.isPending}
+                disabled={syncSource.isPending || !source.isActive}
               >
                 <RefreshCw className={cn('h-4 w-4', syncSource.isPending && 'animate-spin')} />
                 Sync now
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  updateSource.mutate({
+                    id: source.id,
+                    data: { isActive: !source.isActive },
+                  });
+                }}
+                disabled={updateSource.isPending}
+              >
+                {source.isActive ? (
+                  <PowerOff className="h-4 w-4" />
+                ) : (
+                  <Power className="h-4 w-4" />
+                )}
+                {source.isActive ? 'Disable source' : 'Enable source'}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
                 <Edit className="h-4 w-4" />

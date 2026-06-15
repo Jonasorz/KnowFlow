@@ -1,4 +1,5 @@
 import { useArticles, useToggleStar, useMarkAsRead } from '@/hooks/use-articles';
+import { useSources, useSyncSource, useUpdateSource } from '@/hooks/use-sources';
 import { useAppStore } from '@/stores/app-store';
 import { ArticleCard } from './article-card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -65,7 +66,11 @@ function ArticleListSkeleton({ view }: { view: ArticleViewMode }) {
 
 function EmptyState() {
   const navigate = useNavigate();
-  const { currentView } = useAppStore();
+  const { currentView, selectedSourceId } = useAppStore();
+  const { data: sources } = useSources();
+  const syncSource = useSyncSource();
+  const updateSource = useUpdateSource();
+  const selectedSource = sources?.find((source) => source.id === selectedSourceId);
 
   const configs = {
     all: {
@@ -91,7 +96,27 @@ function EmptyState() {
     },
   };
 
-  const config = configs[currentView];
+  const sourceConfig = selectedSourceId && selectedSource?.isActive === false
+    ? {
+        icon: Inbox,
+        title: 'Source disabled',
+        description: 'Enable this source before syncing new articles.',
+        action: updateSource.isPending ? 'Enabling...' : 'Enable Source',
+        onClick: () => updateSource.mutate({ id: selectedSourceId, data: { isActive: true } }),
+        loading: updateSource.isPending,
+      }
+    : selectedSourceId
+    ? {
+        icon: Inbox,
+        title: 'No articles synced yet',
+        description: 'Sync this source to fetch its latest articles.',
+        action: syncSource.isPending ? 'Syncing...' : 'Sync Source',
+        onClick: () => syncSource.mutate(selectedSourceId),
+        loading: syncSource.isPending,
+      }
+    : null;
+
+  const config = sourceConfig || configs[currentView];
   const Icon = config.icon;
 
   return (
@@ -104,7 +129,7 @@ function EmptyState() {
         {config.description}
       </p>
       {config.action && (
-        <Button onClick={config.onClick}>
+        <Button onClick={config.onClick} loading={'loading' in config ? config.loading : false}>
           {config.action}
         </Button>
       )}

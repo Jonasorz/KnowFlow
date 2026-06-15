@@ -22,6 +22,7 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
   const [name, setName] = useState(source.name);
   const [description, setDescription] = useState(source.description || '');
   const [avatarUrl, setAvatarUrl] = useState(source.avatarUrl || '');
+  const [isActive, setIsActive] = useState(source.isActive);
   const [tagsString, setTagsString] = useState('');
   const [error, setError] = useState('');
   
@@ -34,6 +35,7 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
     setName(source.name);
     setDescription(source.description || '');
     setAvatarUrl(source.avatarUrl || '');
+    setIsActive(source.isActive);
     setTagsString(source.tags ? source.tags.join(', ') : '');
     setError('');
   }, [source, open]);
@@ -85,6 +87,7 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
           name: name.trim(),
           description: description.trim() || undefined,
           avatarUrl: avatarUrl.trim() || undefined,
+          isActive,
           tags: parsedTags,
         },
       });
@@ -196,6 +199,19 @@ export function EditSourceDialog({ source, open, onOpenChange }: EditSourceDialo
               onChange={(e) => setTagsString(e.target.value)}
             />
           </div>
+
+          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+            <span className="flex flex-col gap-0.5">
+              <span className="text-xs font-semibold text-foreground">启用订阅源</span>
+              <span className="text-[11px] text-muted-foreground">关闭后不会参与同步全部和每日自动同步。</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+          </label>
 
           {error && (
             <p className="text-xs font-medium text-destructive mt-1">{error}</p>

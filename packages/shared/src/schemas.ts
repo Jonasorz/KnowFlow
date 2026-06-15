@@ -74,6 +74,8 @@ export const settingsSchema = z.object({
   defaultAIModel: aiModelSchema.default('deepseek-chat'),
   theme: z.enum(['light', 'dark', 'system']).default('system'),
   language: z.enum(['zh', 'en']).default('zh'),
+  autoSyncOnOnline: z.boolean().default(false),
+  lastAutoSyncDate: z.string().optional(),
 
   // AI Prompt Templates
   summarySystemPrompt: z.string().optional(),
