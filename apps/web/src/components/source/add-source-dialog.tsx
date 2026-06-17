@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchWechat, useSearchTwitter, useSearchPodcast, useCreateSource, useParseWechatBiz, useBulkImportSources } from '@/hooks/use-sources';
 import { Search, Plus, Check, Users, Eye, MessageCircle, HelpCircle, Loader2, Twitter, Upload, FileText, Trash2, Headphones, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { WechatAccountSearchResult } from '@knowflow/shared';
+import type { TwitterUserSearchResult, WechatAccountSearchResult } from '@knowflow/shared';
 
 interface AddSourceDialogProps {
   open: boolean;
@@ -141,11 +141,52 @@ function downloadTwitterCsvTemplate() {
   URL.revokeObjectURL(url);
 }
 
+type SearchAccountResult = WechatAccountSearchResult | TwitterUserSearchResult | {
+  name: string;
+  biz?: string;
+  identifier?: string;
+  username?: string;
+  user_name?: string;
+  screenName?: string;
+  screen_name?: string;
+  avatar?: string;
+  avatarUrl?: string;
+  description?: string;
+  fans?: number;
+  followers?: number;
+};
+
+type NormalizedSearchResult = {
+  key: string;
+  name: string;
+  identifier: string;
+  avatarUrl?: string;
+  description?: string;
+  metric?: number;
+};
+
+function getCreateSourceErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err || '');
+  if (message.includes('already exists')) {
+    return '该账号已经在订阅列表中。';
+  }
+  if (message.includes('Validation error')) {
+    return '添加失败：搜索结果缺少必要的账号标识，请尝试手动添加。';
+  }
+  return message || '添加订阅源失败';
+}
+
+function isLikelyTwitterHandle(input: string): boolean {
+  return /^[A-Za-z0-9_]{1,15}$/.test(normalizeTwitterHandle(input));
+}
+
 export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
   const [platform, setPlatform] = useState<'wechat' | 'twitter' | 'podcast'>('wechat');
   const [activeTab, setActiveTab] = useState<'search' | 'manual' | 'bulk'>('search');
   const [query, setQuery] = useState('');
   const [subscribedIds, setSubscribedIds] = useState<Set<string>>(new Set());
+  const [searchError, setSearchError] = useState('');
+  const [pendingSubscribeId, setPendingSubscribeId] = useState<string | null>(null);
   
   // WeChat Manual states
   const [manualName, setManualName] = useState('');
@@ -191,6 +232,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
   // Reset search query and errors when platform changes
   useEffect(() => {
     setQuery('');
+    setSearchError('');
     setManualError('');
     setTwManualError('');
     setPodcastManualError('');
@@ -200,6 +242,10 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
       setActiveTab('search');
     }
   }, [platform]);
+
+  useEffect(() => {
+    setSearchError('');
+  }, [query]);
 
   // Reset bulk import states when platform, tab, or dialog state changes
   useEffect(() => {
@@ -251,18 +297,69 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
     }
   }, [manualBizOrUrl, platform]);
 
-  const handleSubscribe = async (account: WechatAccountSearchResult) => {
+  const normalizeSearchResult = (account: SearchAccountResult): NormalizedSearchResult => {
+    const rawIdentifier =
+      'biz' in account && account.biz
+        ? account.biz
+        : 'userName' in account && account.userName
+          ? account.userName
+          : 'identifier' in account && account.identifier
+            ? account.identifier
+            : 'username' in account && account.username
+              ? account.username
+              : 'user_name' in account && account.user_name
+                ? account.user_name
+                : 'screenName' in account && account.screenName
+                  ? account.screenName
+                  : 'screen_name' in account && account.screen_name
+                    ? account.screen_name
+                    : platform === 'twitter' && isLikelyTwitterHandle(query)
+                      ? query
+                      : '';
+    const identifier = platform === 'twitter' ? normalizeTwitterHandle(rawIdentifier) : rawIdentifier.trim();
+    const avatarUrl =
+      account.avatar ||
+      ('avatarUrl' in account && account.avatarUrl ? account.avatarUrl : undefined);
+    const metric =
+      'fans' in account && account.fans !== undefined
+        ? account.fans
+        : 'followers' in account
+          ? account.followers
+          : undefined;
+
+    return {
+      key: identifier || account.name,
+      name: account.name,
+      identifier,
+      avatarUrl,
+      description: account.description,
+      metric,
+    };
+  };
+
+  const handleSubscribe = async (account: SearchAccountResult) => {
+    const item = normalizeSearchResult(account);
+    setSearchError('');
+
+    if (!item.identifier) {
+      setSearchError('添加失败：搜索结果缺少账号标识，请尝试手动添加。');
+      return;
+    }
+
+    setPendingSubscribeId(item.identifier);
     try {
       await createSource.mutateAsync({
         type: platform,
-        name: account.name,
-        identifier: account.biz,
-        avatarUrl: account.avatar,
-        description: account.description,
+        name: item.name,
+        identifier: item.identifier,
+        avatarUrl: item.avatarUrl,
+        description: item.description,
       });
-      setSubscribedIds((prev) => new Set([...prev, account.biz]));
-    } catch {
-      // Error handled by mutation
+      setSubscribedIds((prev) => new Set([...prev, item.identifier]));
+    } catch (err) {
+      setSearchError(getCreateSourceErrorMessage(err));
+    } finally {
+      setPendingSubscribeId(null);
     }
   };
 
@@ -743,6 +840,12 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                 </div>
               )}
 
+              {searchError && (
+                <div className="mb-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive">
+                  {searchError}
+                </div>
+              )}
+
               {!isLoading && results && results.length === 0 && query.length >= 2 && (
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   未找到与 "{query}" 相关的账户
@@ -752,17 +855,19 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
               {results && results.length > 0 && (
                 <div className="flex flex-col gap-1">
                   {results.map((account) => {
-                    const isSubscribed = subscribedIds.has(account.biz);
+                    const item = normalizeSearchResult(account);
+                    const isSubscribed = subscribedIds.has(item.identifier);
+                    const isPending = pendingSubscribeId === item.identifier;
                     return (
                       <div
-                        key={account.biz}
+                        key={item.key}
                         className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-muted/50"
                       >
                         {/* Avatar */}
-                        {account.avatar ? (
+                        {item.avatarUrl ? (
                           <img
-                            src={account.avatar}
-                            alt={account.name}
+                            src={item.avatarUrl}
+                            alt={item.name}
                             className="h-10 w-10 rounded-full object-cover ring-1 ring-border"
                           />
                         ) : (
@@ -780,24 +885,24 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm truncate flex items-center gap-1">
-                            {account.name}
+                            {item.name}
                             {platform === 'twitter' && (
-                              <span className="text-xs text-muted-foreground font-normal font-mono">@{account.biz}</span>
+                              <span className="text-xs text-muted-foreground font-normal font-mono">@{item.identifier}</span>
                             )}
                           </div>
-                          {account.description && (
+                          {item.description && (
                             <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                              {account.description}
+                              {item.description}
                             </p>
                           )}
                           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            {account.fans !== undefined && (
+                            {item.metric !== undefined && (
                               <span className="flex items-center gap-1 font-mono">
                                 <Users className="h-3 w-3" />
-                                {account.fans.toLocaleString()}
+                                {item.metric.toLocaleString()}
                               </span>
                             )}
-                            {platform === 'wechat' && account.avgTopRead !== undefined && (
+                            {platform === 'wechat' && 'avgTopRead' in account && account.avgTopRead !== undefined && (
                               <span className="flex items-center gap-1 font-mono">
                                 <Eye className="h-3 w-3" />
                                 ~{account.avgTopRead.toLocaleString()}
@@ -812,6 +917,7 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                           variant={isSubscribed ? 'secondary' : 'default'}
                           onClick={() => !isSubscribed && handleSubscribe(account)}
                           disabled={isSubscribed || createSource.isPending}
+                          loading={isPending}
                           className="shrink-0"
                         >
                           {isSubscribed ? (
@@ -821,8 +927,8 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
                             </>
                           ) : (
                             <>
-                              <Plus className="h-3.5 w-3.5" />
-                              订阅
+                              {!isPending && <Plus className="h-3.5 w-3.5" />}
+                              {isPending ? '添加中...' : '订阅'}
                             </>
                           )}
                         </Button>

@@ -203,12 +203,19 @@ export class TwitterApiService {
 
     const data = await this.get<{
       users?: Array<{
-        name: string;
-        userName: string;
-        id: string;
+        name?: string;
+        userName?: string;
+        username?: string;
+        user_name?: string;
+        screenName?: string;
+        screen_name?: string;
+        id?: string;
         profilePicture?: string;
+        profile_image_url_https?: string;
+        avatar?: string;
         description?: string;
         followers?: number;
+        followers_count?: number;
       }>;
       status?: string;
       msg?: string;
@@ -218,14 +225,26 @@ export class TwitterApiService {
       throw new Error(data.msg || 'Twitter API returned an error during search');
     }
 
-    const results: TwitterUserSearchResult[] = (data.users || []).map((user) => ({
-      name: user.name,
-      userName: user.userName,
-      id: user.id,
-      avatar: user.profilePicture,
-      description: user.description,
-      followers: user.followers,
-    }));
+    const results: TwitterUserSearchResult[] = (data.users || [])
+      .map((user) => {
+        const userName =
+          user.userName ||
+          user.username ||
+          user.user_name ||
+          user.screenName ||
+          user.screen_name ||
+          '';
+
+        return {
+          name: user.name || userName,
+          userName,
+          id: user.id || userName,
+          avatar: user.profilePicture || user.profile_image_url_https || user.avatar,
+          description: user.description,
+          followers: user.followers ?? user.followers_count,
+        };
+      })
+      .filter((user) => user.userName);
 
     cache.set(cacheKey, results, CACHE_TTL.USER_SEARCH);
     return results;

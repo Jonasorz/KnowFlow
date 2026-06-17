@@ -9,6 +9,7 @@ import type {
   AIRequest,
   AIResultInfo,
   WechatAccountSearchResult,
+  TwitterUserSearchResult,
   Settings,
   DajialaBalanceInfo,
   MoonshotBalanceInfo,
@@ -84,7 +85,7 @@ export const sourcesApi = {
   searchWechat: (query: string) =>
     request<WechatAccountSearchResult[]>(`/sources/wechat/search?q=${encodeURIComponent(query)}`),
   searchTwitter: (query: string) =>
-    request<WechatAccountSearchResult[]>(`/sources/twitter/search?q=${encodeURIComponent(query)}`),
+    request<Array<WechatAccountSearchResult | TwitterUserSearchResult>>(`/sources/twitter/search?q=${encodeURIComponent(query)}`),
   searchPodcast: (query: string) =>
     request<any[]>(`/sources/podcast/search?q=${encodeURIComponent(query)}`),
   parseWechatBiz: (url: string) =>

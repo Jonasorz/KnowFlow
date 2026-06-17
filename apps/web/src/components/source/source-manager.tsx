@@ -211,8 +211,18 @@ export function SourceManager() {
     return source.tags && source.tags.includes(activeTag);
   });
 
+  const filteredActiveSourceIds = filteredSources
+    .filter((source) => source.isActive)
+    .map((source) => source.id);
+  const isFilteredSync = activeTag !== 'all';
+  const syncButtonLabel = isFilteredSync ? '同步当前标签' : 'Sync All';
+
   const allIds = filteredSources.map((s) => s.id);
   const isAllSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+
+  const handleSyncClick = () => {
+    syncAll.mutate(isFilteredSync ? filteredActiveSourceIds : undefined);
+  };
 
   const handleSelectAllToggle = () => {
     if (isAllSelected) {
@@ -285,11 +295,11 @@ export function SourceManager() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => syncAll.mutate(undefined)}
-                disabled={syncAll.isPending}
+                onClick={handleSyncClick}
+                disabled={syncAll.isPending || (isFilteredSync && filteredActiveSourceIds.length === 0)}
               >
                 <RefreshCw className={cn('h-4 w-4', syncAll.isPending && 'animate-spin')} />
-                Sync All
+                {syncButtonLabel}
               </Button>
               <Button size="sm" onClick={() => setAddDialogOpen(true)}>
                 <Plus className="h-4 w-4" />
