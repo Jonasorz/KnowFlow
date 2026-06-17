@@ -10,6 +10,14 @@ This project follows Semantic Versioning where practical:
 
 ## Unreleased
 
+## 0.1.4 - 2026-06-17
+
+### Fixed
+
+- Fixed tag-scoped source syncing so selecting a tag syncs only sources in that tag.
+- Fixed tag source filtering so syncing after choosing a specific source within a tag syncs only that source.
+- Improved X/Twitter search result normalization so subscriptions can be added from more twitterapi.io response shapes.
+
 ## 0.1.3 - 2026-06-13
 
 ### Added

@@ -1,7 +1,7 @@
 {
   "name": "knowflow",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "KnowFlow — Multi-source content aggregation reader",
   "license": "MIT",
   "scripts": {
