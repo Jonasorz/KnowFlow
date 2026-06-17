@@ -68,6 +68,8 @@ export function Header() {
   const handleSyncCurrent = () => {
     if (selectedSourceId) {
       syncAll.mutate([selectedSourceId]);
+    } else if (selectedTagSourceId) {
+      syncAll.mutate([selectedTagSourceId]);
     } else if (selectedTag && sources) {
       const tagIds = sources
         .filter((s) => s.tags && s.tags.includes(selectedTag))
@@ -204,7 +206,7 @@ export function Header() {
         {/* Sync Current (Only shown when a source or tag is selected) */}
         {(selectedSourceId || selectedTag) && (
           <Tooltip
-            content={selectedSourceId ? '同步当前订阅源' : `同步标签 (#${selectedTag}) 下的订阅源`}
+            content={selectedSourceId || selectedTagSourceId ? '同步当前订阅源' : `同步标签 (#${selectedTag}) 下的订阅源`}
             side="bottom"
           >
             <Button
